@@ -1,0 +1,91 @@
+diff --git a/scripts/xpcu_descriptor.py b/scripts/xpcu_descriptor.py
+index 1077029..7c5744f 100755
+--- a/scripts/xpcu_descriptor.py
++++ b/scripts/xpcu_descriptor.py
+@@ -86,7 +86,6 @@ class IFACE(ctypes.Structure):
+ 
+ 
+ class IFACE_DESC(ctypes.Structure):
+-    _pack_ = 0  # natural alignment; matches libusb's struct
+     _fields_ = [
+         ("bLength", ctypes.c_uint8),
+         ("bDescriptorType", ctypes.c_uint8),
+@@ -156,7 +155,20 @@ def ctrl_out(handle, request, value, payload):
+         raise RuntimeError(f"short control write at 0x{value:04x}: {rc}/{len(payload)}")
+ 
+ 
+-def load_firmware(ctx, path):
++def ctrl_in(handle, request, value, length):
++    arr = (ctypes.c_uint8 * length)()
++    rc = lib.libusb_control_transfer(
++        handle, 0xC0, request, value, 0, arr, length, 1000
++    )
++    if rc < 0:
++        name = lib.libusb_error_name(rc).decode("ascii", "replace")
++        raise RuntimeError(f"control in request=0x{request:02x} value=0x{value:04x}: {name}")
++    if rc != length:
++        raise RuntimeError(f"short control read at 0x{value:04x}: {rc}/{length}")
++    return bytes(arr)
++
++
++def load_firmware(ctx, path, verify=False):
+     handle = lib.libusb_open_device_with_vid_pid(ctx, 0x03fd, 0x0013)
+     if not handle:
+         print("pre-firmware 03fd:0013 not present; skipping firmware load")
+@@ -164,13 +176,32 @@ def load_firmware(ctx, path):
+     try:
+         lib.libusb_claim_interface(handle, 0)
+         ctrl_out(handle, 0xA0, 0xE600, b"\x01")
+-        for addr, data in parse_ihex(path):
+-            offset = 0
+-            while offset < len(data):
+-                chunk = data[offset:offset + 64]
+-                ctrl_out(handle, 0xA0, addr + offset, chunk)
+-                offset += len(chunk)
+-        ctrl_out(handle, 0xA0, 0xE600, b"\x00")
++        try:
++            records = list(parse_ihex(path))
++            for addr, data in records:
++                for offset in range(0, len(data), 64):
++                    ctrl_out(handle, 0xA0, addr + offset, data[offset:offset + 64])
++            if verify:
++                expected = {addr + offset: value
++                            for addr, data in records
++                            for offset, value in enumerate(data)}
++                checked = 0
++                # This cable rounds odd 0xA0 read addresses down to the
++                # preceding even address. Read aligned blocks instead.
++                for block in sorted({addr & ~0x3F for addr in expected}):
++                    actual = ctrl_in(handle, 0xA0, block, 64)
++                    for offset, value in enumerate(actual):
++                        addr = block + offset
++                        if addr in expected:
++                            if value != expected[addr]:
++                                raise RuntimeError(
++                                    f"FX2 RAM mismatch at 0x{addr:04x}: "
++                                    f"expected={expected[addr]:02x} actual={value:02x}"
++                                )
++                            checked += 1
++                print(f"verified {checked} firmware bytes in FX2 RAM")
++        finally:
++            ctrl_out(handle, 0xA0, 0xE600, b"\x00")
+         print(f"loaded firmware from {path}")
+     finally:
+         lib.libusb_release_interface(handle, 0)
+@@ -220,12 +251,15 @@ def dump_descriptors(ctx):
+ def main():
+     parser = argparse.ArgumentParser()
+     parser.add_argument("--load-firmware", metavar="HEX", help="load xusb_xp2.hex before dumping")
++    parser.add_argument("--verify-firmware", action="store_true", help="read FX2 RAM back before releasing CPU; requires --load-firmware")
+     args = parser.parse_args()
++    if args.verify_firmware and not args.load_firmware:
++        parser.error("--verify-firmware requires --load-firmware")
+ 
+     ctx = ctypes.c_void_p()
+     lib.libusb_init(ctypes.byref(ctx))
+     if args.load_firmware:
+-        load_firmware(ctx, args.load_firmware)
++        load_firmware(ctx, args.load_firmware, args.verify_firmware)
+     dump_descriptors(ctx)
+     lib.libusb_exit(ctx)
+ 

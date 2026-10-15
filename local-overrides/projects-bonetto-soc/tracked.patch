@@ -1,0 +1,185 @@
+diff --git a/README.md b/README.md
+index b7f9925..6754b2a 100644
+--- a/README.md
++++ b/README.md
+@@ -2,7 +2,7 @@
+ 
+ A growing SoC fabric for the Inspur YPCB-00338 (Kintex-7 `xc7k480t`) and other 7-series boards. Wishbone B4 pipelined throughout. Every IP gates on **formal verification + simulation + hardware witness** before it crosses the line.
+ 
+-> **Status:** DDR3 channel 0 is validated on real YPCB-00338 hardware at a DDR3-800 operating point with deterministic, random, boundary, address-walking, data-bit/byte-lane, XOR checksum, and 600-second soak evidence. See `boards/ypcb-00338/DDR3_VALIDATION.md`.
++> **Current status:** The default image is the BRAM-only JTAG/Wishbone proof. The earlier DDR3 controller was removed; its channel-0 hardware results are preserved in `boards/ypcb-00338/DDR3_VALIDATION.md`. The replacement DDR3 implementation is still in init/MPR bring-up, with external DDR Wishbone storage blocked. See the [board guide](boards/ypcb-00338/README.md) and [Fedora preparation](docs/fedora-bringup.md).
+ 
+ ## Repository layout
+ 
+diff --git a/boards/ypcb-00338/rtl/top_jtag_bram.v b/boards/ypcb-00338/rtl/top_jtag_bram.v
+index a09dbe5..6ed5187 100644
+--- a/boards/ypcb-00338/rtl/top_jtag_bram.v
++++ b/boards/ypcb-00338/rtl/top_jtag_bram.v
+@@ -6,13 +6,16 @@
+ 
+ `default_nettype none
+ 
+-module top_jtag_bram (
++module top_jtag_bram #(
++    parameter integer BRAM_ADDR_W = 14,
++    parameter [31:0] VERSION_WORD = 32'hB07EB001
++) (
+     input  wire       SYS_CLK,
+     input  wire       SYS_RSTN,
+     output wire [2:0] led_3bits_tri_o
+ );
+     localparam integer WB_DATA_W = 32;
+-    localparam integer WB_ADDR_W = 15;
++    localparam integer WB_ADDR_W = BRAM_ADDR_W + 1;
+ 
+     reg [13:0] por_ctr = 14'h3fff;
+     always @(posedge SYS_CLK) begin
+@@ -135,7 +138,7 @@ module top_jtag_bram (
+     wb_decode2 #(
+         .WB_DATA_W (WB_DATA_W),
+         .WB_ADDR_W (WB_ADDR_W),
+-        .SEL_BIT   (14)
++        .SEL_BIT   (BRAM_ADDR_W)
+     ) u_decode (
+         .i_clk       (SYS_CLK),
+         .i_rst       (rst),
+@@ -173,14 +176,14 @@ module top_jtag_bram (
+ 
+     wb_memory #(
+         .WB_DATA_W (WB_DATA_W),
+-        .WB_ADDR_W (14)
++        .WB_ADDR_W (BRAM_ADDR_W)
+     ) u_bram0 (
+         .i_clk      (SYS_CLK),
+         .i_rst      (rst),
+         .i_wb_cyc   (s0_cyc),
+         .i_wb_stb   (s0_stb),
+         .i_wb_we    (s0_we),
+-        .i_wb_adr   (s0_adr[13:0]),
++        .i_wb_adr   (s0_adr[BRAM_ADDR_W-1:0]),
+         .i_wb_dat   (s0_dat_w),
+         .i_wb_sel   (s0_sel),
+         .o_wb_stall (s0_stall),
+@@ -191,14 +194,14 @@ module top_jtag_bram (
+ 
+     wb_memory #(
+         .WB_DATA_W (WB_DATA_W),
+-        .WB_ADDR_W (14)
++        .WB_ADDR_W (BRAM_ADDR_W)
+     ) u_bram1 (
+         .i_clk      (SYS_CLK),
+         .i_rst      (rst),
+         .i_wb_cyc   (s1_cyc),
+         .i_wb_stb   (s1_stb),
+         .i_wb_we    (s1_we),
+-        .i_wb_adr   (s1_adr[13:0]),
++        .i_wb_adr   (s1_adr[BRAM_ADDR_W-1:0]),
+         .i_wb_dat   (s1_dat_w),
+         .i_wb_sel   (s1_sel),
+         .o_wb_stall (s1_stall),
+@@ -226,11 +229,11 @@ module top_jtag_bram (
+             8'h10:   status_word_comb = {16'hAB10, 12'd0,
+                                           jwb_busy, jwb_last_ack,
+                                           jwb_last_err, jwb_halt_others};
+-            8'h11:   status_word_comb = {17'd0, jwb_addr_echo};
++            8'h11:   status_word_comb = {{(32-WB_ADDR_W){1'b0}}, jwb_addr_echo};
+             8'h12:   status_word_comb = jwb_data_echo;
+             8'h13:   status_word_comb = jwb_rd_data;
+             8'h1A:   status_word_comb = {16'hAB1A, jwb_addr_hi_echo};
+-            8'hFE:   status_word_comb = {16'hB07E, 16'hB001};
++            8'hFE:   status_word_comb = VERSION_WORD;
+             8'hFF:   status_word_comb = host_to_fpga;
+             default: status_word_comb = {24'hDEADBA, host_to_fpga[7:0]};
+         endcase
+diff --git a/tools/jtag_bram_validate.py b/tools/jtag_bram_validate.py
+index 9153817..24401f5 100644
+--- a/tools/jtag_bram_validate.py
++++ b/tools/jtag_bram_validate.py
+@@ -20,16 +20,17 @@ from jtag_uart_read import (  # noqa: E402
+ )
+ 
+ 
+-TEST_VECTORS = [
+-    (0x0000, 0x13579BDF),
+-    (0x0001, 0x2468ACE0),
+-    (0x0010, 0xA5A55A5A),
+-    (0x3FFF, 0x0BADF00D),
+-    (0x4000, 0xDEADBEEF),
+-    (0x4001, 0xCAFEBABE),
+-    (0x4010, 0x55AA33CC),
+-    (0x7FFF, 0x10203040),
+-]
++def test_vectors(bank_words):
++    return [
++        (0, 0x13579BDF),
++        (1, 0x2468ACE0),
++        (0x10, 0xA5A55A5A),
++        (bank_words - 1, 0x0BADF00D),
++        (bank_words, 0xDEADBEEF),
++        (bank_words + 1, 0xCAFEBABE),
++        (bank_words + 0x10, 0x55AA33CC),
++        (2 * bank_words - 1, 0x10203040),
++    ]
+ 
+ 
+ def require(cond, msg):
+@@ -38,6 +39,12 @@ def require(cond, msg):
+ 
+ 
+ def validate(args):
++    bank_addr_w, version_expected = {
++        "default": (14, 0xB07EB001),
++        "first": (10, 0xB07EB002),
++    }[args.profile]
++    bank_words = 1 << bank_addr_w
++    vectors = test_vectors(bank_words)
+     xvc = XVC(args.host, args.port)
+     try:
+         print(f"connected to {args.host}:{args.port} - {xvc.info}")
+@@ -51,30 +58,30 @@ def validate(args):
+         version = read_status_reg(xvc, 0xFE)
+         status0 = read_status_reg(xvc, 0x00)
+         print(f"version=0x{version:08x} status0=0x{status0:08x}")
+-        require(version == 0xB07EB001,
+-                f"expected BRAM proof version 0xB07EB001, got 0x{version:08x}")
++        require(version == version_expected,
++                f"expected {args.profile} BRAM proof version 0x{version_expected:08x}, got 0x{version:08x}")
+         require((status0 >> 16) == 0xAB00,
+                 f"status magic mismatch: 0x{status0:08x}")
+ 
+-        for addr, data in TEST_VECTORS:
++        for addr, data in vectors:
+             st = jwb_wb_write(xvc, addr, data)
+             require(((st >> 2) & 1) == 1,
+                     f"write addr=0x{addr:04x} did not ack: status=0x{st:08x}")
+             require(((st >> 1) & 1) == 0,
+                     f"write addr=0x{addr:04x} reported err: status=0x{st:08x}")
+ 
+-        for addr, expected in TEST_VECTORS:
++        for addr, expected in vectors:
+             got = jwb_wb_read(xvc, addr)
+             print(f"read addr=0x{addr:04x} got=0x{got:08x} expected=0x{expected:08x}")
+             require(got == expected,
+                     f"readback mismatch at addr=0x{addr:04x}: got 0x{got:08x}, expected 0x{expected:08x}")
+ 
+-        # Explicit decoder isolation: these two addresses alias if SEL_BIT[14]
++        # Explicit decoder isolation: these two addresses alias if the bank bit
+         # is ignored by the fabric.
+         jwb_wb_write(xvc, 0x0000, 0x11112222)
+-        jwb_wb_write(xvc, 0x4000, 0x33334444)
++        jwb_wb_write(xvc, bank_words, 0x33334444)
+         low = jwb_wb_read(xvc, 0x0000)
+-        high = jwb_wb_read(xvc, 0x4000)
++        high = jwb_wb_read(xvc, bank_words)
+         print(f"decode isolation low=0x{low:08x} high=0x{high:08x}")
+         require(low == 0x11112222 and high == 0x33334444,
+                 "BRAM banks are not isolated by Wishbone decode bit 14")
+@@ -111,6 +118,8 @@ def main():
+     parser.add_argument("--host", default="localhost")
+     parser.add_argument("--port", type=int, default=3721)
+     parser.add_argument("--tck-ns", type=int, default=None)
++    parser.add_argument("--profile", choices=("default", "first"), default="default",
++                        help="default: two 64 KiB banks; first: two 4 KiB banks")
+     parser.add_argument("--resume", action="store_true",
+                         help="clear JTAG-WB halt_others before exiting")
+     args = parser.parse_args()

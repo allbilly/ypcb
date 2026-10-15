@@ -1,0 +1,14 @@
+# Independent clones and projects retain their own Git histories.
+/openFPGALoader/
+/ref/
+/projects/
+
+# Locally supplied firmware, generated evidence and native build products.
+/firmware/
+/migration-receipts/
+/.Xil/
+*.so
+*.sr
+/smt2_tdo_loopback
+__pycache__/
+*.pyc

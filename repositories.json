@@ -1,0 +1,297 @@
+{
+  "snapshot_utc": "2026-10-15T07:28:20.351015+00:00",
+  "primary_repository": {
+    "path": "../openTPU",
+    "push": "https://github.com/allbilly/openTPU.git",
+    "checkpoint_branch": "ypcb/ch1-bringup",
+    "tracked_separately": true
+  },
+  "repositories": [
+    {
+      "path": "openFPGALoader",
+      "url": "https://github.com/trabucayre/openFPGALoader",
+      "head": "dafa7fcab2b96e927fd3108c3f33d1cc46117c8b",
+      "tracked_patch": "local-overrides/openFPGALoader/tracked.patch",
+      "tracked_patch_sha256": "a4141d5cd9a0f59e61700b399c97573366a3073d28d388811f8f3178e14313dd",
+      "untracked_sources": [],
+      "omitted_untracked_non_source": [],
+      "dirty": true
+    },
+    {
+      "path": "ref/ZYNQ-NVDLA",
+      "url": "https://github.com/LeiWang1999/ZYNQ-NVDLA",
+      "head": "8879622518b9d500b024b80466156968f5e48056",
+      "omitted_untracked_non_source": [],
+      "dirty": false
+    },
+    {
+      "path": "ref/fxload",
+      "url": "https://github.com/esden/fxload.git",
+      "head": "092d9b11f8881c6bf5a1b55288f07adf26d5ec0e",
+      "omitted_untracked_non_source": [],
+      "dirty": false
+    },
+    {
+      "path": "ref/inspur-adventures",
+      "url": "https://github.com/FeSens/inspur-adventures",
+      "head": "998bb2569ad3e31ee853d1c30957be4b8ac04095",
+      "tracked_patch": "local-overrides/ref-inspur-adventures/tracked.patch",
+      "tracked_patch_sha256": "65eb44b1f1b2c01c2b394897e493599c90b4e682f2b83f85fce78ebd99df01cd",
+      "untracked_sources": [
+        {
+          "path": "scripts/xpcu_stage2.py",
+          "copy": "local-overrides/ref-inspur-adventures/files/scripts/xpcu_stage2.py",
+          "bytes": 7680,
+          "sha256": "fe4daf4c6d4f17d79d3980001df1c0a5a13ce37da27006bbd715c7c25a62c0d7"
+        }
+      ],
+      "omitted_untracked_non_source": [
+        "scripts/__pycache__/xpcu_descriptor.cpython-314.pyc",
+        "scripts/__pycache__/xpcu_stage2.cpython-314.pyc"
+      ],
+      "dirty": true
+    },
+    {
+      "path": "ref/xpcu-macos",
+      "url": "https://github.com/FeSens/xpcu-macos",
+      "head": "b38e956880557b5f2e94321878e654567de5cdd2",
+      "omitted_untracked_non_source": [],
+      "dirty": false
+    },
+    {
+      "path": "ref/ypcb_00338_1p1_hack",
+      "url": "https://github.com/TiferKing/ypcb_00338_1p1_hack",
+      "head": "8b13ecf71b7061dd43a2b1580f0caa469f64303f",
+      "omitted_untracked_non_source": [],
+      "dirty": false
+    },
+    {
+      "path": "projects/bonetto-soc",
+      "url": "https://github.com/FeSens/bonetto-soc",
+      "head": "f6eea6c8ed9d79322a6ee8e9fd5a1ffccf57cb96",
+      "tracked_patch": "local-overrides/projects-bonetto-soc/tracked.patch",
+      "tracked_patch_sha256": "0b2695fdbb478863f39da437c0f86cdc943ddbce0e80b094eb4f24232579677f",
+      "untracked_sources": [
+        {
+          "path": "boards/ypcb-00338/rtl/top_jtag_bram_first.v",
+          "copy": "local-overrides/projects-bonetto-soc/files/boards/ypcb-00338/rtl/top_jtag_bram_first.v",
+          "bytes": 497,
+          "sha256": "29388f209b0abb635752b1bac8071c76926e432770026935d40cb2546c88df0c"
+        },
+        {
+          "path": "boards/ypcb-00338/sim/tb_jtag_bram_first.sv",
+          "copy": "local-overrides/projects-bonetto-soc/files/boards/ypcb-00338/sim/tb_jtag_bram_first.sv",
+          "bytes": 3310,
+          "sha256": "6c75ec0fc41fb976a76647c322bdd0a3c0f8d14a0eb042386f6ec535d56f358e"
+        },
+        {
+          "path": "docs/fedora-bringup.md",
+          "copy": "local-overrides/projects-bonetto-soc/files/docs/fedora-bringup.md",
+          "bytes": 17926,
+          "sha256": "f28e7e3c620bda5dfb795eddb504836a555d2c72548c9a2a391e292dfb82c11e"
+        },
+        {
+          "path": "progress.md",
+          "copy": "local-overrides/projects-bonetto-soc/files/progress.md",
+          "bytes": 140325,
+          "sha256": "46a1c8984cfe8164170120500642029b0b788dc82327b4164e474d7dc10c56ad"
+        },
+        {
+          "path": "scripts/fedora-bringup.sh",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-bringup.sh",
+          "bytes": 4710,
+          "sha256": "d2cb2f41e1349bf30aebe104861b03b79719ece4c095e6bffd38162f8f6b3ba0"
+        },
+        {
+          "path": "scripts/fedora-build-bram.sh",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-build-bram.sh",
+          "bytes": 8042,
+          "sha256": "acb8e0ccdaa58d784c80fdc873d555f9ce2a35a7211197e60e0f7f467c004b4d"
+        },
+        {
+          "path": "scripts/fedora-build-loader.sh",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-build-loader.sh",
+          "bytes": 3480,
+          "sha256": "f83308caa5b6c4ea15ab34c23ab10a37c5a70b6b963b6bad585ab3065fb9c640"
+        },
+        {
+          "path": "scripts/fedora-build-router.py",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-build-router.py",
+          "bytes": 4992,
+          "sha256": "3077e696f8c7f51fcbecbd6b947d4949334396c82d7ce1d0b83627c9ed04c7e1"
+        },
+        {
+          "path": "scripts/fedora-check-bitstream.py",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-check-bitstream.py",
+          "bytes": 8120,
+          "sha256": "fff25b8c415e2ad5dffc4a231a30965ad3bf95eb6e941c7b2b12e6798cd7cc4e"
+        },
+        {
+          "path": "scripts/fedora-check-vivado-bitstream.py",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-check-vivado-bitstream.py",
+          "bytes": 6785,
+          "sha256": "480f6a4bd7ee7e5e7f6c9eee5750a3f1e223f52a4f87cb694afade7d0558f756"
+        },
+        {
+          "path": "scripts/fedora-env.sh",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-env.sh",
+          "bytes": 1286,
+          "sha256": "a66b29b639a35855690153291fa6c5616ebd599f20bd195c210d218bd9c40b5e"
+        },
+        {
+          "path": "scripts/fedora-fasm2frames.py",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-fasm2frames.py",
+          "bytes": 651,
+          "sha256": "a87fa1e5336a3366219c70943dc8f550a727705cbd13f6ff34f9f0c3d18706ee"
+        },
+        {
+          "path": "scripts/fedora-route-native-jtag.tcl",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-route-native-jtag.tcl",
+          "bytes": 5706,
+          "sha256": "eb4ba35048bbc145b4961147333559af801e51c3c0366302e132df03d31f20d9"
+        },
+        {
+          "path": "scripts/fedora-run-native-jtag.py",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-run-native-jtag.py",
+          "bytes": 3693,
+          "sha256": "30679b2fd3492f0d0ae9bfa4dfc4f0f2634b114668ea7fa256d9d156c08b21fb"
+        },
+        {
+          "path": "scripts/patches/nextpnr-router1-precision.patch",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/patches/nextpnr-router1-precision.patch",
+          "bytes": 1123,
+          "sha256": "dcbc7ff4e13f7b4b961c9d6e9578370a416604d323ab888481930c9d0f9f5cf2"
+        },
+        {
+          "path": "scripts/patches/openfpgaloader-xpcu-xvc.patch",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/patches/openfpgaloader-xpcu-xvc.patch",
+          "bytes": 8770,
+          "sha256": "369e01373b0119cfb946623a2dfe5762df02de4bdd425ae52afe0a40089ca15b"
+        },
+        {
+          "path": "scripts/workspace_paths.py",
+          "copy": "local-overrides/projects-bonetto-soc/files/scripts/workspace_paths.py",
+          "bytes": 2405,
+          "sha256": "2aeea294b144db7f6a42c7865983b8b5863c9a409f16a065d720019e7120b7b2"
+        }
+      ],
+      "omitted_untracked_non_source": [
+        "xelab.pb"
+      ],
+      "dirty": true
+    },
+    {
+      "path": "projects/inspur-adventures",
+      "url": "https://github.com/FeSens/inspur-adventures",
+      "head": "998bb2569ad3e31ee853d1c30957be4b8ac04095",
+      "omitted_untracked_non_source": [],
+      "dirty": false
+    },
+    {
+      "path": "projects/openTPU-upstream-e15b4a44",
+      "url": "https://github.com/allbilly/openTPU.git",
+      "head": "e15b4a44234661df7e14176b90669ead4d579fbe",
+      "omitted_untracked_non_source": [],
+      "dirty": false
+    },
+    {
+      "path": "projects/ypcb_00338_1p1_hack",
+      "url": "https://github.com/TiferKing/ypcb_00338_1p1_hack",
+      "head": "8b13ecf71b7061dd43a2b1580f0caa469f64303f",
+      "untracked_sources": [
+        {
+          "path": ".gitignore",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/.gitignore",
+          "bytes": 26,
+          "sha256": "6cf68f361ed9af9c89f8304b81604d87347c3d38348e90f1e5bef55ea8fa99a5"
+        },
+        {
+          "path": "docs/FEDORA_BRINGUP.md",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/docs/FEDORA_BRINGUP.md",
+          "bytes": 21058,
+          "sha256": "0ccfa74c0a9dd4680e752a51b359aae6449b8e3f1137e16bc4558f43bcd56fa3"
+        },
+        {
+          "path": "scripts/build_fedora_ddr_full.py",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/build_fedora_ddr_full.py",
+          "bytes": 3963,
+          "sha256": "5dab73d071ed9d57ae4b37976b835523697e47b663a7a526a4f86cb1da0ab378"
+        },
+        {
+          "path": "scripts/build_fedora_microblaze.py",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/build_fedora_microblaze.py",
+          "bytes": 8262,
+          "sha256": "a4ed3bfb11fc022f5d1591f49276b912bbacbfc376c5293a1d8e29187e9d4646"
+        },
+        {
+          "path": "scripts/fedora-xsdb.sh",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/fedora-xsdb.sh",
+          "bytes": 735,
+          "sha256": "9fa2c461584693ed48140466ae2e3b787142d01de913fe7f1d5ac51ee9eec6b8"
+        },
+        {
+          "path": "scripts/fedora_cpu_run.tcl",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/fedora_cpu_run.tcl",
+          "bytes": 4881,
+          "sha256": "0d28107e1f4937f1f536dc5d807bd5ef8fbc16cc6e22bae12693ad8d10c10f8d"
+        },
+        {
+          "path": "scripts/fedora_ddr_diag.c",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/fedora_ddr_diag.c",
+          "bytes": 2441,
+          "sha256": "d4d3424e450c2b373a8eb4cc37e6296d7462d966454157e5e1e323b47642e843"
+        },
+        {
+          "path": "scripts/fedora_ddr_full.c",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/fedora_ddr_full.c",
+          "bytes": 2949,
+          "sha256": "ee8a751ced3b84f1d129eb9879bf2bdac72be8f2598ac554ff7f1030f55ac35c"
+        },
+        {
+          "path": "scripts/fedora_ddr_full_core.h",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/fedora_ddr_full_core.h",
+          "bytes": 2854,
+          "sha256": "0d7742938befb88188de9f850664e59783d9b4ae576496b3f8729dc969f1ce57"
+        },
+        {
+          "path": "scripts/fedora_soc.py",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/fedora_soc.py",
+          "bytes": 13485,
+          "sha256": "5d1e2a51d0d753504a1023f7f61427ad4f60e4ed1da3e2ebb054553ba788e994"
+        },
+        {
+          "path": "scripts/prepare_fedora_baseline.py",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/prepare_fedora_baseline.py",
+          "bytes": 3708,
+          "sha256": "eb5b5f31dfe75ae46892bb15020dc8c0568f3c318c1a4fd79a19a87039dc0cd9"
+        },
+        {
+          "path": "scripts/review_fedora_clocks.py",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/review_fedora_clocks.py",
+          "bytes": 3812,
+          "sha256": "d39615a308969413ef861975f5d34faa50079a03b6d958f8e4c48bacc5f78cb5"
+        },
+        {
+          "path": "scripts/test_fedora_ddr_full_core.c",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/test_fedora_ddr_full_core.c",
+          "bytes": 3240,
+          "sha256": "0235bd047bdece248d906ffeb950413f5637e12d6d4bbf17c0e67b2f4d5d40e4"
+        },
+        {
+          "path": "scripts/test_fedora_soc.py",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/test_fedora_soc.py",
+          "bytes": 16704,
+          "sha256": "708d2e05d974dd33a25db4794aa872b0fdb0d860151c77cd62219e257ac62c01"
+        },
+        {
+          "path": "scripts/workspace_paths.py",
+          "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/workspace_paths.py",
+          "bytes": 2405,
+          "sha256": "2aeea294b144db7f6a42c7865983b8b5863c9a409f16a065d720019e7120b7b2"
+        }
+      ],
+      "omitted_untracked_non_source": [],
+      "dirty": true
+    }
+  ]
+}

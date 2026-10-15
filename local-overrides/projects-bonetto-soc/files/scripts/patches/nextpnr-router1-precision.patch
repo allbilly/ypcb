@@ -1,0 +1,32 @@
+Allow an isolated Himbaechel build to tune router1's search tolerance.
+The default and final timing checks are unchanged. The Fedora BRAM flow
+sets BONETTO_ROUTER1_ESTIMATE_PRECISION to 1000 (picoseconds here).
+
+--- a/common/route/router1.cc
++++ b/common/route/router1.cc
+@@ -19,6 +19,8 @@
+ 
+ #include <chrono>
+ #include <cmath>
++#include <cstdlib>
++#include <limits>
+ #include <mutex>
+ #include <queue>
+ 
+@@ -1156,6 +1158,16 @@
+     reuseBonus = wireRipupPenalty / 2;
+ 
+     estimatePrecision = 100 * ctx->getRipupDelayPenalty();
++    const char *precision = std::getenv("BONETTO_ROUTER1_ESTIMATE_PRECISION");
++    if (precision != nullptr) {
++        char *end = nullptr;
++        long value = std::strtol(precision, &end, 10);
++        if (*precision == '\0' || *end != '\0' || value < 0 ||
++            value > std::numeric_limits<delay_t>::max())
++            log_error("Invalid BONETTO_ROUTER1_ESTIMATE_PRECISION.\n");
++        estimatePrecision = delay_t(value);
++    }
++    log_info("Router1 search precision: %.3f ns\n", ctx->getDelayNS(estimatePrecision));
+ }
+ 
+ bool router1(Context *ctx, const Router1Cfg &cfg)

@@ -1,0 +1,242 @@
+diff --git a/.gitignore b/.gitignore
+index 4bd4d62..d5ad332 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -37,6 +37,7 @@ openFPGALoader
+ 
+ # Build directory
+ build/
++build-xpcu-debug/
+ 
+ # Documentation
+ /doc/__pycache__/
+@@ -47,4 +48,4 @@ build/
+ /doc/compatibility/fpga.inc
+ 
+ # VSCode local settings directory
+-/.vscode/
+\ No newline at end of file
++/.vscode/
+diff --git a/src/fx2_ll.cpp b/src/fx2_ll.cpp
+index afd911e..c0d4fba 100644
+--- a/src/fx2_ll.cpp
++++ b/src/fx2_ll.cpp
+@@ -7,6 +7,7 @@
+ #include <stdint.h>
+ #include <unistd.h>
+ 
++#include <cstdio>
+ #include <stdexcept>
+ #include <string>
+ #include <vector>
+@@ -20,8 +21,34 @@
+ #define FX2_GCR_CPUCS          0xe600
+ #define FX2_GCR_CPUCS_8051_RES (1 << 0)
+ 
++static std::string fx2_usb_devices(libusb_context *ctx, uint16_t vid,
++		uint16_t uninit_pid, uint16_t init_pid)
++{
++	libusb_device **devices = nullptr;
++	const ssize_t count = libusb_get_device_list(ctx, &devices);
++	if (count < 0)
++		return std::string("enumeration failed: ") + libusb_error_name(count);
++
++	std::string result;
++	for (ssize_t i = 0; i < count; i++) {
++		libusb_device_descriptor desc;
++		if (libusb_get_device_descriptor(devices[i], &desc) != LIBUSB_SUCCESS ||
++				desc.idVendor != vid ||
++				(desc.idProduct != uninit_pid && desc.idProduct != init_pid))
++			continue;
++		char entry[96];
++		snprintf(entry, sizeof(entry), "%s%04x:%04x bus=%u address=%u",
++				result.empty() ? "" : ", ", desc.idVendor, desc.idProduct,
++				libusb_get_bus_number(devices[i]), libusb_get_device_address(devices[i]));
++		result += entry;
++	}
++	libusb_free_device_list(devices, 1);
++	return result.empty() ? "none" : result;
++}
++
+ FX2_ll::FX2_ll(uint16_t uninit_vid, uint16_t uninit_pid,
+-		uint16_t vid, uint16_t pid, const std::string &firmware_path)
++		uint16_t vid, uint16_t pid, const std::string &firmware_path,
++		int8_t verbose): _verbose(verbose)
+ {
+ 	int ret;
+ 	bool reenum = false;
+@@ -29,12 +56,17 @@ FX2_ll::FX2_ll(uint16_t uninit_vid, uint16_t uninit_pid,
+ 	if (libusb_init(&usb_ctx) < 0) {
+ 		throw std::runtime_error("libusb init failed");
+ 	}
++	if (_verbose >= 2)
++		printInfo("FX2 USB before firmware: " + fx2_usb_devices(usb_ctx,
++				uninit_vid, uninit_pid, pid));
+ 
+ 	/* try to open uninitialized device */
+ 	if (uninit_vid != 0 && uninit_pid != 0) {
+ 		dev_handle = libusb_open_device_with_vid_pid(usb_ctx,
+ 				uninit_vid, uninit_pid);
+ 		if (dev_handle) {
++			if (_verbose >= 2)
++				printInfo("FX2: pre-firmware device opened; claiming interface 0");
+ 			ret = libusb_claim_interface(dev_handle, 0);
+ 			if (ret) {
+ 				libusb_close(dev_handle);
+@@ -43,12 +75,15 @@ FX2_ll::FX2_ll(uint16_t uninit_vid, uint16_t uninit_pid,
+ 			}
+ 			/* load firmware */
+ 			if (!load_firmware(firmware_path)) {
++				printError("FX2 firmware upload failed before re-enumeration");
+ 				libusb_close(dev_handle);
+ 				libusb_exit(usb_ctx);
+ 				throw std::runtime_error("fx2 firmware load failed");
+ 			}
+ 			close();
+ 			reenum = true;
++			if (_verbose >= 2)
++				printInfo("FX2: CPU released; waiting for USB re-enumeration");
+ 		}
+ 	}
+ 
+@@ -63,15 +98,25 @@ FX2_ll::FX2_ll(uint16_t uninit_vid, uint16_t uninit_pid,
+ 				vid, pid);
+ 		timeout--;
+ 		progress.display(100-timeout);
++		if (_verbose >= 2 && !dev_handle &&
++				(timeout == 99 || timeout % 10 == 0))
++			printInfo("FX2 USB reload t+" + std::to_string(100-timeout) +
++					"s: " + fx2_usb_devices(usb_ctx, uninit_vid,
++							uninit_pid, pid));
+ 		if (!dev_handle)
+ 			sleep(1);
+ 	} while (!dev_handle && timeout > 0 && reenum);
+ 
+ 	if (!dev_handle) {
+ 		progress.fail();
++		if (_verbose >= 2)
++			printInfo("FX2 USB after timeout: " + fx2_usb_devices(usb_ctx,
++					uninit_vid, uninit_pid, pid));
+ 		throw std::runtime_error("FX2: fail to open device");
+ 	}
+ 	progress.done();
++	if (_verbose >= 2)
++		printInfo("FX2: initialized device opened; claiming interface 0");
+ 
+ 	ret = libusb_claim_interface(dev_handle, 0);
+ 	if (ret) {
+@@ -160,11 +205,26 @@ int FX2_ll::write_ctrl(uint8_t bRequest, uint16_t wValue,
+ 	int ret = libusb_control_transfer(dev_handle,
+ 			LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
+ 			bRequest, wValue, wIndex, buff, len, 100);
++	if (_verbose >= 2 && bRequest == FX2_FIRM_LOAD) {
++		char message[160];
++		snprintf(message, sizeof(message),
++				"FX2 control OUT request=0x%02x address=0x%04x expected=%u actual=%d timeout=100ms%s",
++				bRequest, wValue, len, ret,
++				(wValue == FX2_GCR_CPUCS && len == 1 && buff) ?
++					((buff[0] & FX2_GCR_CPUCS_8051_RES) ? " CPUCS=HOLD data=01" :
++					 " CPUCS=RUN data=00") : "");
++		printInfo(message);
++	}
+ 	if (ret < 0) {
+ 		printError("Unable to send control request: "
+ 				+ std::string(libusb_error_name(ret)));
+ 		return false;
+ 	}
++	if (ret != len) {
++		printError("FX2 short control write: expected " + std::to_string(len) +
++				" bytes, got " + std::to_string(ret));
++		return false;
++	}
+ 	return true;
+ }
+ 
+@@ -191,13 +251,25 @@ int FX2_ll::read_ctrl(uint8_t bRequest, uint16_t wValue,
+ bool FX2_ll::load_firmware(std::string firmware_path)
+ {
+ 	IhexParser ihex(firmware_path, false, true);
+-	ihex.parse();
++	if (ihex.parse() != 0) {
++		printError("FX2 firmware HEX parse failed");
++		return false;
++	}
++	std::vector<IhexParser::data_line_t> data = ihex.getDataArray();
++	if (_verbose >= 2) {
++		size_t bytes = 0;
++		for (const auto &section : data)
++			bytes += section.length;
++		printInfo("FX2 firmware parsed: " + std::to_string(data.size()) +
++				" sections, " + std::to_string(bytes) + " bytes");
++	}
+ 
+ 	/* reset */
++	if (_verbose >= 2)
++		printInfo("FX2: assert CPUCS.8051RES");
+ 	if (!reset(1))
+ 		return false;
+ 	/* load */
+-	std::vector<IhexParser::data_line_t> data = ihex.getDataArray();
+ 	ProgressBar progress("Loading firmware", data.size(), 50, false);
+ 	for (size_t i = 0; i < data.size(); i++) {
+ 		IhexParser::data_line_t data_line = data[i];
+@@ -220,6 +292,8 @@ bool FX2_ll::load_firmware(std::string firmware_path)
+ 	progress.done();
+ 
+ 	/* unset reset */
++	if (_verbose >= 2)
++		printInfo("FX2: release CPUCS.8051RES");
+ 	if (!reset(0))
+ 		return false;
+ 	return true;
+@@ -230,12 +304,11 @@ bool FX2_ll::load_firmware(std::string firmware_path)
+ bool FX2_ll::reset(uint8_t res8051)
+ {
+ 	unsigned char buf[1];
+-	int ret;
+ 
+ 	buf[0] = res8051;
+-	if (!(ret = write_ctrl(FX2_FIRM_LOAD, FX2_GCR_CPUCS, buf, 1))) {
+-		printError("Unable to send control request: "
+-				+ std::string(libusb_error_name(ret)));
++	if (!write_ctrl(FX2_FIRM_LOAD, FX2_GCR_CPUCS, buf, 1)) {
++		printError("FX2 CPUCS write failed while setting 8051RES=" +
++				std::to_string(res8051));
+ 		return false;
+ 	}
+ 	return true;
+diff --git a/src/fx2_ll.hpp b/src/fx2_ll.hpp
+index 8040530..e1d7584 100644
+--- a/src/fx2_ll.hpp
++++ b/src/fx2_ll.hpp
+@@ -28,7 +28,8 @@ class FX2_ll {
+ 		 * \param[in] firmware_path: firmware to load
+ 		 */
+ 		FX2_ll(uint16_t uninit_vid, uint16_t uninit_pid,
+-				uint16_t vid, uint16_t pid, const std::string &firmware_path);
++				uint16_t vid, uint16_t pid, const std::string &firmware_path,
++				int8_t verbose = 0);
+ 		~FX2_ll();
+ 
+ 		/*!
+@@ -95,6 +96,6 @@ class FX2_ll {
+ 
+ 		libusb_device_handle *dev_handle;
+ 		libusb_context *usb_ctx;
++		int8_t _verbose;
+ };
+ #endif  // SRC_FX2_LL_HPP_
+-
+diff --git a/src/xilinxPlatformCableUSB.cpp b/src/xilinxPlatformCableUSB.cpp
+index 817369c..4e86498 100644
+--- a/src/xilinxPlatformCableUSB.cpp
++++ b/src/xilinxPlatformCableUSB.cpp
+@@ -84,7 +84,7 @@ XilinxPlatformCableUSB::XilinxPlatformCableUSB(const uint16_t vid,
+ 
+ 	try {
+ 		fx2 = std::make_unique<FX2_ll>(vid, pid, XPCU_INITIALIZED_VID,
+-				XPCU_INITIALIZED_PID, firmware_file);
++				XPCU_INITIALIZED_PID, firmware_file, _verbose);
+ 	} catch (std::exception &e) {
+ 		printError(e.what());
+ 		throw std::runtime_error("lowlevel init failed");
