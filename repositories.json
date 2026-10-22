@@ -70,7 +70,7 @@
       "url": "https://github.com/FeSens/bonetto-soc",
       "head": "f6eea6c8ed9d79322a6ee8e9fd5a1ffccf57cb96",
       "tracked_patch": "local-overrides/projects-bonetto-soc/tracked.patch",
-      "tracked_patch_sha256": "0b2695fdbb478863f39da437c0f86cdc943ddbce0e80b094eb4f24232579677f",
+      "tracked_patch_sha256": "aa87d8d688f870c0847d8b1aafaecc26a41177aa7f10313ab1190298d415a532",
       "untracked_sources": [
         {
           "path": "boards/ypcb-00338/rtl/top_jtag_bram_first.v",
@@ -81,32 +81,32 @@
         {
           "path": "boards/ypcb-00338/sim/tb_jtag_bram_first.sv",
           "copy": "local-overrides/projects-bonetto-soc/files/boards/ypcb-00338/sim/tb_jtag_bram_first.sv",
-          "bytes": 3310,
-          "sha256": "6c75ec0fc41fb976a76647c322bdd0a3c0f8d14a0eb042386f6ec535d56f358e"
+          "bytes": 5916,
+          "sha256": "53802b8c1ae2e2bd52ac4418e44b580410d738698daaeb568a668f70fa03bc08"
         },
         {
           "path": "docs/fedora-bringup.md",
           "copy": "local-overrides/projects-bonetto-soc/files/docs/fedora-bringup.md",
-          "bytes": 17926,
-          "sha256": "f28e7e3c620bda5dfb795eddb504836a555d2c72548c9a2a391e292dfb82c11e"
+          "bytes": 15280,
+          "sha256": "ca0de4e5c6c9142a214b08ccdeec199239c94181549463874b997eaa7a1e9568"
         },
         {
           "path": "progress.md",
           "copy": "local-overrides/projects-bonetto-soc/files/progress.md",
-          "bytes": 140325,
-          "sha256": "46a1c8984cfe8164170120500642029b0b788dc82327b4164e474d7dc10c56ad"
+          "bytes": 140734,
+          "sha256": "1960993430ea066310f56f7134789f83b1383fcc660b89ce1c497b1fabbeaab9"
         },
         {
           "path": "scripts/fedora-bringup.sh",
           "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-bringup.sh",
-          "bytes": 4710,
-          "sha256": "d2cb2f41e1349bf30aebe104861b03b79719ece4c095e6bffd38162f8f6b3ba0"
+          "bytes": 5271,
+          "sha256": "b9f3803caf71bdf134471cfcd5f0014a3f254eb1080af693907b2b36167b698e"
         },
         {
           "path": "scripts/fedora-build-bram.sh",
           "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-build-bram.sh",
-          "bytes": 8042,
-          "sha256": "acb8e0ccdaa58d784c80fdc873d555f9ce2a35a7211197e60e0f7f467c004b4d"
+          "bytes": 12322,
+          "sha256": "ba8e0e14f224dfd9b054adfadb5e8d9640103394d06b8c3ecde3be3c564bc34f"
         },
         {
           "path": "scripts/fedora-build-loader.sh",
@@ -123,8 +123,8 @@
         {
           "path": "scripts/fedora-check-bitstream.py",
           "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-check-bitstream.py",
-          "bytes": 8120,
-          "sha256": "fff25b8c415e2ad5dffc4a231a30965ad3bf95eb6e941c7b2b12e6798cd7cc4e"
+          "bytes": 9672,
+          "sha256": "2ce0d99be9048c0ca01a2bb5019b45cff18e0b0c8638bd8b5eda0a2d4a535ae5"
         },
         {
           "path": "scripts/fedora-check-vivado-bitstream.py",
@@ -135,8 +135,8 @@
         {
           "path": "scripts/fedora-env.sh",
           "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-env.sh",
-          "bytes": 1286,
-          "sha256": "a66b29b639a35855690153291fa6c5616ebd599f20bd195c210d218bd9c40b5e"
+          "bytes": 1433,
+          "sha256": "3e5d2a22aa0167a60e31cc3cbca9c586158305b4682e97536617fddeebe2f282"
         },
         {
           "path": "scripts/fedora-fasm2frames.py",
@@ -147,14 +147,14 @@
         {
           "path": "scripts/fedora-route-native-jtag.tcl",
           "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-route-native-jtag.tcl",
-          "bytes": 5706,
-          "sha256": "eb4ba35048bbc145b4961147333559af801e51c3c0366302e132df03d31f20d9"
+          "bytes": 5940,
+          "sha256": "9149b90741aee942b5711398462e9a38ea7fee86a8f56e78cfba617fc4dfa4ee"
         },
         {
           "path": "scripts/fedora-run-native-jtag.py",
           "copy": "local-overrides/projects-bonetto-soc/files/scripts/fedora-run-native-jtag.py",
-          "bytes": 3693,
-          "sha256": "30679b2fd3492f0d0ae9bfa4dfc4f0f2634b114668ea7fa256d9d156c08b21fb"
+          "bytes": 8080,
+          "sha256": "1ffbea649c2e58e333843ec6303aea1c367e462279e5603d1b20188182049ea4"
         },
         {
           "path": "scripts/patches/nextpnr-router1-precision.patch",
@@ -171,8 +171,26 @@
         {
           "path": "scripts/workspace_paths.py",
           "copy": "local-overrides/projects-bonetto-soc/files/scripts/workspace_paths.py",
-          "bytes": 2405,
-          "sha256": "2aeea294b144db7f6a42c7865983b8b5863c9a409f16a065d720019e7120b7b2"
+          "bytes": 2753,
+          "sha256": "f89ea2019cfc9a67c790fd8ca9c0cbd50b5729452ea3ef87a813e4764feca19d"
+        },
+        {
+          "path": "tests/test_artifact_helpers.py",
+          "copy": "local-overrides/projects-bonetto-soc/files/tests/test_artifact_helpers.py",
+          "bytes": 11600,
+          "sha256": "116570d2dc4c852c3b54a7d10ed54997c4f90079b950442a6ac8830c630cb63c"
+        },
+        {
+          "path": "tests/test_build_flow.py",
+          "copy": "local-overrides/projects-bonetto-soc/files/tests/test_build_flow.py",
+          "bytes": 11634,
+          "sha256": "4dce6d952a9e9d5956963387076a200a5d56ee56cee5ec87e296abab7f33f8c2"
+        },
+        {
+          "path": "tests/test_jtag_bram_profiles.py",
+          "copy": "local-overrides/projects-bonetto-soc/files/tests/test_jtag_bram_profiles.py",
+          "bytes": 3103,
+          "sha256": "b8f32d03c0ccfb32d822746850aa21b85bf13e45969359ce99ce48b8159770af"
         }
       ],
       "omitted_untracked_non_source": [

@@ -50,10 +50,91 @@ for name, expected in source['files_sha256'].items():
 PYVERIFY
 "$router" --version
 
-# Use upstream synthesis and XDC generation, without invoking its legacy router.
-make -C "$board" PROJECT="$project" TOP=top_jtag_bram_first \
-    RTL='rtl/top_jtag_bram_first.v rtl/top_jtag_bram.v ../../ip/wb-memory/rtl/wb_memory.v ../../ip/jtag-uart/rtl/jtag_uart.v ../../ip/jtag-uart/rtl/jtag_wb_master.v ../../ip/wishbone/rtl/wb_decode2.v' \
-    "build/$project.json" "build/$project.xdc"
+# The upstream JSON target does not track its Makefile, synthesis options or
+# tool. Bind both generated inputs to their effective recipes and contents.
+synth_command=(make -C "$board" PROJECT="$project" TOP=top_jtag_bram_first
+    RTL='rtl/top_jtag_bram_first.v rtl/top_jtag_bram.v ../../ip/wb-memory/rtl/wb_memory.v ../../ip/jtag-uart/rtl/jtag_uart.v ../../ip/jtag-uart/rtl/jtag_wb_master.v ../../ip/wishbone/rtl/wb_decode2.v'
+    "build/$project.json" "build/$project.xdc")
+python3 - "$board" "$project" "${synth_command[@]}" <<'PYSYNTH'
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+board, project = Path(sys.argv[1]), sys.argv[2]
+command = sys.argv[3:]
+record_path = Path('build/fedora-bram-first-synthesis.json')
+sources = next(arg[4:] for arg in command if arg.startswith('RTL=')).split()
+inputs = [board / name for name in sources]
+inputs += [board / 'Makefile', board / 'constraints/ypcb003381p1_active.xdc']
+outputs = [board / 'build' / (project + suffix) for suffix in ('.json', '.xdc')]
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+def snapshot():
+    yosys = shutil.which('yosys')
+    if not yosys:
+        raise SystemExit('Missing synthesis tool: yosys')
+    # -B -n expands the actual Makefile recipes even when targets already exist.
+    recipe = subprocess.check_output([command[0], '-B', '-n', *command[1:]], text=True)
+    return {
+        'schema': 1,
+        'command': command,
+        'recipe': recipe,
+        'inputs_sha256': {str(path): digest(path) for path in inputs},
+        'yosys': {'path': yosys, 'sha256': digest(Path(yosys))},
+        'environment': {key: value for key, value in os.environ.items()
+                        if key.startswith('YOSYS_') or key in ('MAKEFLAGS', 'MAKEFILES')},
+    }
+
+expected = snapshot()
+try:
+    recorded = json.loads(record_path.read_text())
+    reusable = recorded['inputs'] == expected and recorded['outputs_sha256'] == {
+        str(path): digest(path) for path in outputs
+    }
+except (OSError, ValueError, KeyError):
+    reusable = False
+if reusable:
+    print('Reusing verified synthesis and XDC; recipes, sources and tool are unchanged.', flush=True)
+else:
+    # A successful make exit alone is insufficient: inherited -n/-t modes can
+    # skip compilation. Preserve old outputs and require newly generated files.
+    # Keep legitimate make variable overrides intact.
+    with tempfile.TemporaryDirectory(prefix='synthesis-backup-', dir=record_path.parent) as directory:
+        existed = {path: path.exists() for path in outputs}
+        backups = {}
+        published = False
+        try:
+            for path in outputs:
+                if existed[path]:
+                    backup = Path(directory) / path.name
+                    path.replace(backup)
+                    backups[path] = backup
+            subprocess.run([command[0], '-B', *command[1:]], check=True)
+            if snapshot() != expected:
+                raise SystemExit('Synthesis inputs changed during the build; run the build again')
+            if any(not path.is_file() or path.stat().st_size == 0 for path in outputs):
+                raise SystemExit('Synthesis or constraint generation produced no fresh output; check make flags')
+            recorded = {'inputs': expected,
+                        'outputs_sha256': {str(path): digest(path) for path in outputs}}
+            temporary = record_path.with_suffix('.json.tmp')
+            temporary.write_text(json.dumps(recorded, indent=2, sort_keys=True) + '\n')
+            temporary.replace(record_path)
+            published = True
+        finally:
+            if not published:
+                for path, backup in backups.items():
+                    backup.replace(path)
+                for path in outputs:
+                    if not existed[path]:
+                        path.unlink(missing_ok=True)
+PYSYNTH
 placed="$work/placed.json"
 routing_input="$work/router1.json"
 place_record=build/fedora-bram-first-placement.sha256
@@ -127,11 +208,27 @@ xc7frames2bit --part_file "$database/kintex7/$part/part.yaml" \
     --part_name "$part" --frm_file "$frames" --output_file "$bit.tmp"
 [[ -s "$bit.tmp" ]] || die 'The frame assembler produced no bitstream'
 mv "$bit.tmp" "$bit"
+# Routing/assembly can take a long time. Do not attach current source hashes
+# to an image whose synthesis inputs changed while those stages were running.
+python3 - <<'PYRECHECK'
+import hashlib
+import json
+from pathlib import Path
+
+record = json.loads(Path('build/fedora-bram-first-synthesis.json').read_text())
+expected = {**record['inputs']['inputs_sha256'], **record['outputs_sha256']}
+yosys = record['inputs']['yosys']
+expected[yosys['path']] = yosys['sha256']
+for name, digest in expected.items():
+    if hashlib.sha256(Path(name).read_bytes()).hexdigest() != digest:
+        raise SystemExit(f'Synthesis provenance changed before image publication: {name}')
+PYRECHECK
 sha256sum "$bit" "$fasm" "$frames" "$work/bonetto_jtag_bram_timing.json" \
     "$board/build/$project.json" "$board/build/$project.xdc" \
     "$board/rtl/top_jtag_bram_first.v" "$board/rtl/top_jtag_bram.v" \
     "$board/constraints/ypcb003381p1_active.xdc" \
     "$board/Makefile" ip/wb-memory/rtl/wb_memory.v \
+    build/fedora-bram-first-synthesis.json "$(command -v yosys)" \
     ip/jtag-uart/rtl/jtag_uart.v ip/jtag-uart/rtl/jtag_wb_master.v \
     ip/wishbone/rtl/wb_decode2.v scripts/fedora-build-bram.sh \
     "$router" "$chipdb" "$routing_input" "$router_work/build-manifest.json" "$router_work/source-manifest.json" \

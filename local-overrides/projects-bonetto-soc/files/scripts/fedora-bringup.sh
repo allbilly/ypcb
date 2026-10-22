@@ -14,7 +14,7 @@ require_loader() {
     [[ -x "$ofl" ]] || die "Build the XVC-enabled loader first: $ofl"
     [[ -r build/fedora-loader.sha256 ]] || die 'Run bash scripts/fedora-build-loader.sh to record the loader build.'
     sha256sum --check --status build/fedora-loader.sha256 || die 'Loader or its recorded source changed; rebuild it.'
-    "$ofl" --help | rg -- '--xvc' >/dev/null || die 'The selected loader has no XVC support.'
+    "$ofl" --help | grep -F -- '--xvc' >/dev/null || die 'The selected loader has no XVC support.'
 }
 
 require_bit() {
@@ -34,7 +34,7 @@ case ${1:-check} in
         require_bit
         [[ -r "$init" ]] || die "Missing cable initializer: $init"
         printf 'Host preparation is ready; physical hardware has not been validated.\n'
-        if ! lsusb -d 03fd: | rg '03fd:(0013|0008)'; then
+        if ! lsusb -d 03fd: | grep -E '03fd:(0013|0008)'; then
             printf 'DLC10 is disconnected. Attach it and power the board before detect/program.\n'
         fi
         ;;
@@ -54,6 +54,13 @@ case ${1:-check} in
             ip/wb-memory/rtl/wb_memory.v ip/jtag-uart/rtl/jtag_uart.v \
             ip/jtag-uart/rtl/jtag_wb_master.v ip/wishbone/rtl/wb_decode2.v
         timeout 120 vvp build/first-bram-sim/test.vvp
+        iverilog -g2012 -DBONETTO_SOC_SIM -s tb_jtag_bram_first \
+            -Ptb_jtag_bram_first.FIRST_PROFILE=0 \
+            -o build/first-bram-sim/default.vvp "$board/sim/tb_jtag_bram_first.sv" \
+            "$board/rtl/top_jtag_bram_first.v" "$board/rtl/top_jtag_bram.v" \
+            ip/wb-memory/rtl/wb_memory.v ip/jtag-uart/rtl/jtag_uart.v \
+            ip/jtag-uart/rtl/jtag_wb_master.v ip/wishbone/rtl/wb_decode2.v
+        timeout 120 vvp build/first-bram-sim/default.vvp
         ;;
     formal-bram)
         make formal-wishbone formal-wb-memory SOLVER=yices
@@ -78,7 +85,9 @@ case ${1:-check} in
         require_loader
         require_bit
         bash "$init"
-        "$ofl" --cable xilinxPlatformCableUsb --freq 6000000 --index-chain 0 "$bit"
+        "$ofl" --cable xilinxPlatformCableUsb \
+            --misc-device 0x10931093,8,inspur_cpld \
+            --freq 6000000 --index-chain 0 "$bit"
         ;;
     xvc)
         require_loader

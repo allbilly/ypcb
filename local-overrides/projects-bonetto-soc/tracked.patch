@@ -1,5 +1,5 @@
 diff --git a/README.md b/README.md
-index b7f9925..6754b2a 100644
+index b7f9925..8a5915c 100644
 --- a/README.md
 +++ b/README.md
 @@ -2,7 +2,7 @@
@@ -7,7 +7,7 @@ index b7f9925..6754b2a 100644
  A growing SoC fabric for the Inspur YPCB-00338 (Kintex-7 `xc7k480t`) and other 7-series boards. Wishbone B4 pipelined throughout. Every IP gates on **formal verification + simulation + hardware witness** before it crosses the line.
  
 -> **Status:** DDR3 channel 0 is validated on real YPCB-00338 hardware at a DDR3-800 operating point with deterministic, random, boundary, address-walking, data-bit/byte-lane, XOR checksum, and 600-second soak evidence. See `boards/ypcb-00338/DDR3_VALIDATION.md`.
-+> **Current status:** The default image is the BRAM-only JTAG/Wishbone proof. The earlier DDR3 controller was removed; its channel-0 hardware results are preserved in `boards/ypcb-00338/DDR3_VALIDATION.md`. The replacement DDR3 implementation is still in init/MPR bring-up, with external DDR Wishbone storage blocked. See the [board guide](boards/ypcb-00338/README.md) and [Fedora preparation](docs/fedora-bringup.md).
++> **Current status:** The default image is the BRAM-only JTAG/Wishbone proof. The earlier DDR3 controller was removed; its channel-0 hardware results are preserved in `boards/ypcb-00338/DDR3_VALIDATION.md`. The replacement controller's init-only image blocks external DDR Wishbone access, and external storage validation remains incomplete. See the [board guide](boards/ypcb-00338/README.md) and [Linux BRAM preparation](docs/fedora-bringup.md).
  
  ## Repository layout
  
@@ -92,7 +92,7 @@ index a09dbe5..6ed5187 100644
              default: status_word_comb = {24'hDEADBA, host_to_fpga[7:0]};
          endcase
 diff --git a/tools/jtag_bram_validate.py b/tools/jtag_bram_validate.py
-index 9153817..24401f5 100644
+index 9153817..1b54271 100644
 --- a/tools/jtag_bram_validate.py
 +++ b/tools/jtag_bram_validate.py
 @@ -20,16 +20,17 @@ from jtag_uart_read import (  # noqa: E402
@@ -136,7 +136,7 @@ index 9153817..24401f5 100644
      xvc = XVC(args.host, args.port)
      try:
          print(f"connected to {args.host}:{args.port} - {xvc.info}")
-@@ -51,30 +58,30 @@ def validate(args):
+@@ -51,33 +58,33 @@ def validate(args):
          version = read_status_reg(xvc, 0xFE)
          status0 = read_status_reg(xvc, 0x00)
          print(f"version=0x{version:08x} status0=0x{status0:08x}")
@@ -173,7 +173,11 @@ index 9153817..24401f5 100644
 +        high = jwb_wb_read(xvc, bank_words)
          print(f"decode isolation low=0x{low:08x} high=0x{high:08x}")
          require(low == 0x11112222 and high == 0x33334444,
-                 "BRAM banks are not isolated by Wishbone decode bit 14")
+-                "BRAM banks are not isolated by Wishbone decode bit 14")
++                f"BRAM banks are not isolated by Wishbone decode bit {bank_addr_w}")
+
+         # Byte-select proof for the JTAG-WB master and wb_memory write mask.
+         jwb_wb_write(xvc, 0x0020, 0x11223344)
 @@ -111,6 +118,8 @@ def main():
      parser.add_argument("--host", default="localhost")
      parser.add_argument("--port", type=int, default=3721)

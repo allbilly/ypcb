@@ -117,6 +117,9 @@ write_checkpoint [file join $out_dir final-routed.dcp]
 drc_gate final-drc
 
 phase TIMING_GATE
+# This gate covers constrained setup/hold paths only. The reports above retain
+# external-I/O coverage, pulse-width, bus-skew and CDC findings for review;
+# passing this gate is not full DDR timing or physical-hardware qualification.
 set setup [get_timing_paths -delay_type max -max_paths 1 -nworst 1]
 set hold [get_timing_paths -delay_type min -max_paths 1 -nworst 1]
 if {[llength $setup] != 1 || [llength $hold] != 1} {error "missing setup/hold timing paths"}

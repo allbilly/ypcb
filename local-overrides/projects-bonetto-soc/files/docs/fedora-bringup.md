@@ -1,4 +1,7 @@
-# Fedora YPCB preparation
+# Linux YPCB BRAM preparation
+
+These helpers were developed on Fedora and retain their `fedora-*` filenames.
+They use standard Linux command-line tools and project-local dependencies.
 
 Prepare `top_jtag_bram_first` for `xc7k480tffg1156-2`: a smaller configuration
 of upstream `top_jtag_bram`, with two 4 KiB Wishbone BRAM banks and USER1
@@ -14,11 +17,13 @@ uses the corresponding address bit, giving the first profile word addresses
 
 For this first run the card is powered separately with JTAG only. The BRAM
 image can validate read/write access without PCIe or a processor application.
-The MicroBlaze baseline and OpenTPU are prepared in their separate checkouts.
-OpenTPU's upstream host path uses PCIe; the local standalone openXC7 target
-adds USER2 JTAG control and memory access for the separately powered card.
 
-## Current preparation results (2026-10-06)
+## Recorded BRAM preparation results (2026-10-06)
+
+The results below describe a retained local build. The generated files under
+`build/` and `boards/ypcb-00338/build/` are outside the source distribution.
+Recheck or rebuild them against the current sources before use; a historical
+hash or test count does not qualify subsequent source changes.
 
 The selected simulation suites passed 34 tests. An additional first-profile
 fabric integration test passed a write/read sweep of all 2,048 words across
@@ -42,113 +47,47 @@ ID, frame payload and START/DESYNC commands. Evidence is in
 `build/fedora-first-route-run.json`, `build/fedora-first-frame-assembly.json`
 and `build/fedora-first-bitstream-check.json`. No FPGA programming has occurred.
 
-The full two-64-KiB profile remains a later routing target. Bounded legacy
-and default native routing attempts did not complete. Their logs and the
+At that snapshot, bounded legacy and default native routing attempts for the
+full two-64-KiB profile did not complete. Their logs and the
 verified 777-primitive placement checkpoint are preserved under `build/`.
 The first wrapper reduces the mapped memory from 32 RAMB36 blocks to two.
 The successful native stages are recorded in
 `build/fedora-first-bram-uncached-build.log`; the final assembly/reuse log is
 `build/fedora-first-bram-build.log`.
 
-The local OpenTPU preparation guide (`${OTPU_ROOT}/docs/fedora_bringup.md`)
-describes the selected openXC7 port: the full accelerator, dual DDR3-800,
-a 100 MHz core and USER2 JTAG transport. Full synthesis passed on 2026-10-07.
-The corrected carry, DSP cascade and FF clock-edge probes passed routing and
-strict frame assembly. Earlier full placement attempts failed; the corrected
-run is still in placement, so no OpenTPU bitstream or physical DDR/compute
-result is available. Hard-cell timing qualification
-and the eventual PCIe integration also remain incomplete.
-
-The captured failing carry cluster passes legality in three empty locations.
-A separate full-design placement timeout overflow is confirmed; its
-assessment (`${OTPU_ROOT}/docs/openxc7_placer_timeout.md`)
-records the evidence and correction plan. The isolated rebuild and sanitizer
-checks were staged under this checkout's writable `build/` directory while
-the OpenTPU checkout was read-only. Its current output path is in
-`build/opentpu-placer-recovery-active.json`. Arithmetic checks pass all nine
-boundary/settings cases, including safe termination at the counter boundary.
-The corrected backend compiled successfully. Carry routing and all 256
-four-output comparisons passed; DSP routing covered 64 DSPs and 2,880 cascade
-bits, retaining the expected FF clock edges. Strict frames passed for both
-probes and match the previously verified frame hashes. At 17:06 UTC on
-2026-10-07 the controller started full implementation from the unchanged
-mapped checkpoint, with the full DDR800 parameters. These probe results do
-not prove full-design fit or timing closure. A patch for the read-only OpenTPU
-helper and plan is preserved beside the build as `openTPU-recovery.patch`.
-The actual full run completed packing and confirmed the corrected finite
-search limit for 531,351 cells at 17:11 UTC. It retains all 717 DSPs and
-179,299 flip-flops; initial placement completed, and main analytical placement
-ran for 300,290 movable cells. That candidate was subsequently retired after
-the two-slice carry-placement backend passed its required gates.
-`full-timeout-runtime.json` beside the recovery build records this observation.
-
-OpenTPU's README quickstart uses Vivado (`make bit`) and a PCIe-connected
-card. Selecting openXC7 and a separately powered, JTAG-only card requires
-porting the build and adding JTAG transport. The present blocker is full
-FPGA placement. The second-slice carry-placement correction passed actual
-placement, four dedicated carry links and all 256 input patterns/four outputs.
-Normal carry and 64-DSP/2,880-bit cascade/FF-edge regressions passed on the same
-binary, and all three probes passed strict frame assembly. The selected full
-implementation now uses that backend, reusing the full mapped checkpoint and
-the completed hash-checked gates. `carry-sites-plan.md` beside the recovery
-build records its evidence and validation requirements. The persistent source
-helpers are in OpenTPU's `tools/openxc7_carry_sites{,_check}.py`.
-
-After the selected OpenTPU pipeline finishes frame and bitstream assembly,
-run the independent file check from this checkout:
-
-```sh
-otpu_pipeline=$(python3 -c 'import json; print(json.load(open("build/opentpu-placer-recovery-active.json"))["pipeline"])')
-python3 scripts/fedora-check-bitstream.py \
-  --bit "$otpu_pipeline/design.bit" \
-  --fasm "$otpu_pipeline/route/design.fasm" \
-  --jtag-chain 2 --pipeline-manifest "$otpu_pipeline/pipeline.json" \
-  --out "$otpu_pipeline/independent-bitstream-recheck.json"
-```
-
-The checker verifies the header signature, exact FPGA part and configuration
-ID, packet bounds, frame-data presence, START/DESYNC and the selected JTAG
-feature. In OpenTPU mode it also checks the completed full-profile pipeline,
-recorded bitstream/frame/FASM hashes and frame-input provenance. Its real
-Bonetto USER1-image check and nine rejection cases passed. Those results are
-in `bitstream-check-rejections-v2.json` beside the recovery build; repeat them
-with its `verify-bitstream-checker.py`. OpenTPU file acceptance awaits its
-actual image. CRC, timing qualification and physical execution remain separate
-checks; this command performs no programming.
-
-For a CPU and vendor-MIG DDR diagnostic baseline, use the separately staged
-TiferKing first-run guide (`${YPCB_ROOT}/projects/ypcb_00338_1p1_hack/docs/FEDORA_BRINGUP.md`).
-Its supplied Vivado bitstream matches this FPGA, and avoids a hardware rebuild.
-Both its original application and a first-run diagnostic are now compiled and
-verified to fit local BRAM. XSDB starts through the isolated helper and connects
-to a local hardware server. The diagnostic checks CPU/local BRAM, then the first
-4 KiB of each DDR channel; the physical run remains pending. After this BRAM
-test passes, use `python3 scripts/fedora_soc.py run` from the TiferKing checkout.
-OpenTPU's Fedora setup and subsequent PCIe steps are in its local
-preparation guide (`${OTPU_ROOT}/docs/fedora_bringup.md`).
+OpenTPU and MicroBlaze/MIG projects are optional external context. Consult
+their own checkouts for current build state, transport requirements and
+hardware validation. Earlier recovery work staged in Bonetto's local `build/`
+directory belongs to those projects and is excluded from this BRAM procedure.
 
 ## Native host environment
 
-The Fedora helper reuses existing native tools without installing Nix,
+The helper reuses existing native tools without installing Nix,
 changing shell profiles or modifying those other checkouts. The
 [openXC7 project](https://github.com/openXC7/toolchain-nix) describes the
 underlying Yosys, nextpnr and Project X-Ray flow.
 
-| Component | Current local source |
+| Component | Required local source |
 |---|---|
-| Yosys and Icarus | Homebrew executables on PATH |
+| Yosys and Icarus | Executables on PATH |
 | Python simulation | `build/fedora-venv`, Python 3.13, cocotb 2.0.1 |
 | SymbiYosys | `build/sby-source`, revision `b1a1e98cba941ec8433f8dc27f416cd7bb7f14be`, installed under `build/fedora-tools` |
 | Yices | upstream 2.7.0 Linux binary, installed under `build/fedora-tools` |
 | nextpnr-himbaechel | isolated copy at `build/himbaechel-probe/nextpnr-himbaechel`, version `c68c135`, source revision `c68c13582e972292c86a5025140d52e713384cbc` |
-| Matching assembler database | `${OTPU_WORKSPACE_ROOT}/tiny-gpu/build/ypcb/prjxray-db`, revision `517d66a383676cb971177ea92b0ff3b6ea6e8690` |
-| Exact-part chipdb | `${OTPU_WORKSPACE_ROOT}/tiny-gpu/build/ypcb/nextpnr-build/himbaechel/uarch/xilinx/chipdb-xc7k480t.bin` |
-| FASM Python tool | `${OTPU_WORKSPACE_ROOT}/tiny-gpu/build/ypcb/xray-venv/bin/fasm2frames` |
-| Frame assembler | `${OTPU_WORKSPACE_ROOT}/tiny-gpu/build/ypcb/prjxray-build/tools/xc7frames2bit`, source `ed3331c6200f421164101388759fc2860b0f5634` |
+| Matching assembler database | `${BONETTO_WORKSPACE_ROOT}/tiny-gpu/build/ypcb/prjxray-db`, revision `517d66a383676cb971177ea92b0ff3b6ea6e8690` |
+| Exact-part chipdb | `${BONETTO_WORKSPACE_ROOT}/tiny-gpu/build/ypcb/nextpnr-build/himbaechel/uarch/xilinx/chipdb-xc7k480t.bin` |
+| FASM Python tool | `${BONETTO_WORKSPACE_ROOT}/tiny-gpu/build/ypcb/xray-venv/bin/fasm2frames` |
+| Frame assembler | `${BONETTO_WORKSPACE_ROOT}/tiny-gpu/build/ypcb/prjxray-build/tools/xc7frames2bit`, source `ed3331c6200f421164101388759fc2860b0f5634` |
 | XVC-enabled programmer | isolated `build/openfpgaloader-xvc-dlc10` build with DLC10 XVC support |
 
 Source `scripts/fedora-env.sh` to put these tools on PATH for this shell.
-The `BONETTO_*` environment variables in that file allow paths to be changed.
+Set `BONETTO_WORKSPACE_ROOT` to the workspace containing the `tiny-gpu` tool
+donor. The helpers also accept the legacy `OTPU_WORKSPACE_ROOT` alias and
+fall back to `$HOME`, in that order. The individual `BONETTO_*` environment
+variables in `fedora-env.sh` allow tool paths to be changed independently.
+Use `YPCB_ROOT` for the shared cable-tool checkout or `BONETTO_CABLE_INIT`
+for the initializer script itself. `YPCB_ROOT` defaults to
+`$BONETTO_WORKSPACE_ROOT/ypcb` after resolving the workspace fallback above.
 The router is a local copy; its chipdb and assembler depend on the other checkouts.
 Do not remove their build directories while using this environment.
 The original placement binary has SHA256
@@ -201,7 +140,7 @@ provides `yices-2.7.0-x86_64-pc-linux-gnu-static-gmp.tar.gz`; verify SHA256
 `49566b6f817692820538df78fe406878400d79810631c9372b2495bc81d3e00a`
 and extract with `--strip-components=1` into `build/fedora-tools`.
 
-The existing Fedora programmer source has pre-existing cable-driver changes.
+The expected programmer donor source includes pre-existing cable-driver changes.
 The initializer continues to use its original loader. Its upstream XVC server
 only supports FTDI/GPIO and needs both DLC10 selection and arbitrary TMS/TDI
 shifting before Bonetto can use this cable.
@@ -251,11 +190,40 @@ It uses separate UART and JTAG-master simulation result files so one suite
 cannot overwrite the other's XML. Preserve their outcomes and scope; a bounded pass is not an unbounded
 inductive proof.
 
+The integration bench now sweeps all 2,048 first-profile words and checks
+both default-profile bank boundaries, bank isolation, byte masks, version,
+address echo and read-data status registers. Unknown reset or completion
+signals fail the bench. The serial BSCAN path remains outside this bench's
+scope. Run the focused profile and unknown-signal rejection checks with:
+
+```sh
+python3 -m unittest discover -s tests -p test_jtag_bram_profiles.py -v
+```
+
+To inspect a BRAM image's file structure independently after a build:
+
+```sh
+python3 scripts/fedora-check-bitstream.py \
+  --bit boards/ypcb-00338/build/bonetto_soc_ypcb00338_jtag_bram_first.bit \
+  --fasm boards/ypcb-00338/build/bonetto_soc_ypcb00338_jtag_bram_first.fasm \
+  --jtag-chain 1 --out build/fedora-first-bitstream-recheck.json
+```
+
+This checks the header, FPGA part and configuration ID, packet bounds,
+frame-data presence, START/DESYNC and the selected FASM JTAG feature.
+CRC, timing qualification and physical operation need separate evidence.
+
 The helpers record checksums of the programmer, its patch and source manifest,
 and the bitstream and its RTL, constraints and native tools. `check` and
-`program` refuse changed artifacts. The Fedora build helper invokes upstream
-synthesis and XDC generation for the first wrapper, then places with seed 1 and a cached measured
-delay model. Routing resumes the saved placement and random-generator state.
+`program` refuse changed artifacts. The build helper invokes upstream
+synthesis and XDC generation for the first wrapper. Its
+`build/fedora-bram-first-synthesis.json` receipt records source, Makefile and
+pin-input hashes, expanded Make recipes, the Yosys binary and relevant build
+environment. Missing or mismatched receipts force regeneration, including a
+one-time rebuild of synthesis outputs created before this receipt existed.
+Inputs that change during synthesis are rejected. Placement then uses seed 1
+and a cached measured delay model. Routing resumes the saved placement and
+random-generator state.
 The checkpoint copy explicitly sets `router1`, because saved settings override
 the command-line selection. The route-only run uses the backend's standard
 delay estimator; it does not rerun the placement delay-matrix initialization.

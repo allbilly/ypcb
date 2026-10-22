@@ -92,15 +92,49 @@ def parse_bitstream(data):
                 commands=commands, packets=packets)
 
 
+def jtag_features(text):
+    """Read scalar chain selectors, rejecting syntax we cannot account for.
+
+    This is deliberately not a general FASM parser. Other features are outside
+    this check, but no BSCAN chain selector may be silently skipped.
+    """
+    features = set()
+    values = {}
+    for number, original in enumerate(text.splitlines(), 1):
+        line = original.split('#', 1)[0].strip()
+        if '.BSCAN.JTAG_CHAIN_' not in line:
+            continue
+        match = re.fullmatch(
+            r"([A-Za-z][A-Za-z0-9_]*\.BSCAN\.JTAG_CHAIN_[1-4])"
+            r"(?:\[0(?::0)?\])?(?:\s*=\s*(.+))?", line)
+        require(match is not None, f'Unsupported JTAG selector on FASM line {number}')
+        feature, literal = match.groups()
+        value = 1
+        if literal is not None:
+            plain = re.fullmatch(r'[0-9_]+', literal)
+            based = re.fullmatch(r"(?:(\d+)\s*)?'([bhdo])\s*([0-9a-fA-F_]+)", literal)
+            require(plain is not None or based is not None,
+                    f'Invalid JTAG selector value on FASM line {number}')
+            if plain:
+                value = int(literal.replace('_', ''), 10)
+            else:
+                width, base, digits = based.groups()
+                require(width is None or int(width) == 1,
+                        f'JTAG selector must be one bit on FASM line {number}')
+                value = int(digits.replace('_', ''), {'b': 2, 'h': 16, 'd': 10, 'o': 8}[base])
+            require(value in (0, 1), f'JTAG selector is not scalar on FASM line {number}')
+        require(feature not in values or values[feature] == value,
+                f'Conflicting JTAG selector values on FASM line {number}')
+        values[feature] = value
+        if value:
+            features.add(feature)
+    return features
+
+
 def check(bit, fasm, chain, pipeline_manifest=None):
     bit, fasm = bit.resolve(), fasm.resolve()
     parsed = parse_bitstream(bit.read_bytes())
-    features = set()
-    for line in fasm.read_text().splitlines():
-        match = re.fullmatch(r"([A-Za-z0-9_]+\.BSCAN\.JTAG_CHAIN_[1-4])(?:\s*=\s*(?:1|1'b1|1'h1|1'd1))?",
-                             line.split('#', 1)[0].strip())
-        if match:
-            features.add(match.group(1))
+    features = jtag_features(fasm.read_text())
     require(len(features) == 1 and next(iter(features)).endswith('_'+str(chain)),
             'FASM does not select exactly the requested JTAG chain')
     provenance = None

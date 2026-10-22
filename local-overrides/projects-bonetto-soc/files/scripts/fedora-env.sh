@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Source from any directory. Reuse the native tools already built on this host.
 BONETTO_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export BONETTO_WORKSPACE_ROOT=${BONETTO_WORKSPACE_ROOT:-${OTPU_WORKSPACE_ROOT:-$HOME}}
+export YPCB_ROOT=${YPCB_ROOT:-$BONETTO_WORKSPACE_ROOT/ypcb}
 BONETTO_HIMBAECHEL_BINARY=${BONETTO_HIMBAECHEL_BINARY:-${BONETTO_WORKSPACE_ROOT:-$HOME}/tiny-gpu/build/ypcb/nextpnr-cli-build/nextpnr-himbaechel}
 BONETTO_HIMBAECHEL_CHIPDB=${BONETTO_HIMBAECHEL_CHIPDB:-${BONETTO_WORKSPACE_ROOT:-$HOME}/tiny-gpu/build/ypcb/nextpnr-build/himbaechel/uarch/xilinx/chipdb-xc7k480t.bin}
 BONETTO_XRAY_BIN=${BONETTO_XRAY_BIN:-${BONETTO_WORKSPACE_ROOT:-$HOME}/tiny-gpu/build/ypcb/xray-venv/bin}

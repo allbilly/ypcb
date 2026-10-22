@@ -1,3 +1,9 @@
+> Historical handoff archived from the earlier shared workspace. This file preserves
+> dated OpenTPU and MicroBlaze observations, paths and commands; it is not a current
+> Bonetto readiness report. Consult the shared YPCB project inventory and each
+> current checkout before reusing artifacts or resuming work. No build or hardware
+> action was performed by the 2026-10-23 documentation and snapshot review.
+
 # YPCB MicroBlaze and OpenTPU preparation
 
 Native Vivado completed 2026-10-10 20:25 HKT; physical JTAG bring-up started at 21:38 HKT.
