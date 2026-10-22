@@ -1,25 +1,27 @@
 diff --git a/dlc10-init.sh b/dlc10-init.sh
 new file mode 100755
-index 0000000..0dce1fb
+index 0000000..6aaf6fc
 --- /dev/null
 +++ b/dlc10-init.sh
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,84 @@
 +#!/usr/bin/env bash
 +# Fedora DLC10 volatile boot + overlay initialization and YPCB JTAG detection.
 +set -euo pipefail
 +root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 +ofl="$root/openFPGALoader/build-xpcu-debug/openFPGALoader"
-+stage2="$root/ref/inspur-adventures/scripts/xpcu_stage2.py"
++stage2="$root/local-overrides/ref-inspur-adventures/files/scripts/xpcu_stage2.py"
 +boot="$root/firmware/xusb_xp2-boot.hex"
 +overlay="$root/firmware/xusb_xp2-overlay.hex"
 +helper="$root/ref/fxload/a3load.hex"
++# The documented YPCB JTAG chain has a CPLD-like device before the FPGA.
++misc_device=(--misc-device 0x10931093,8,inspur_cpld)
 +die() { echo "Error: $*" >&2; exit 1; }
 +[[ $# == 0 ]] || die 'Usage: bash dlc10-init.sh (initializes cable RAM and detects FPGA only)'
 +for cmd in lsusb sha256sum awk pgrep python3; do
 +    command -v "$cmd" >/dev/null || die "Missing command: $cmd"
 +done
 +[[ -x "$ofl" && -r "$stage2" ]] || die 'Build openFPGALoader/build-xpcu-debug and provide xpcu_stage2.py first.'
-+for process in hw_server xsdb fxload; do
++for process in openFPGALoader hw_server xsdb fxload; do
 +    if pgrep -x "$process" >/dev/null; then
 +        die "Stop $process before using this cable."
 +    fi
@@ -50,8 +52,9 @@ index 0000000..0dce1fb
 +    # This old boot firmware may fail the preliminary JTAG scan; the required
 +    # result of this step is USB re-enumeration. Detection is checked after overlay.
 +    boot_rc=0
-+    "$ofl" --cable xilinxPlatformCableUsb --probe-firmware "$boot" \
-+        --freq 500000 --detect --verbose-level 2 >"$logs/boot.log" 2>&1 || boot_rc=$?
++    "$ofl" --cable xilinxPlatformCableUsb "${misc_device[@]}" \
++        --probe-firmware "$boot" --freq 500000 --detect --verbose-level 2 \
++        >"$logs/boot.log" 2>&1 || boot_rc=$?
 +    echo "Boot command exit: $boot_rc (see boot.log)"
 +fi
 +# Require an operational node stable for several seconds before the next upload.
@@ -77,20 +80,20 @@ index 0000000..0dce1fb
 +    die 'Overlay upload failed; replug before retrying.'
 +fi
 +sleep 1
-+if ! "$ofl" --cable xilinxPlatformCableUsb --freq 500000 --detect \
-+    --verbose-level 2 >"$logs/detect.log" 2>&1; then
++if ! "$ofl" --cable xilinxPlatformCableUsb "${misc_device[@]}" \
++    --freq 500000 --detect --verbose-level 2 >"$logs/detect.log" 2>&1; then
 +    cat "$logs/detect.log"
 +    die 'FPGA detection failed.'
 +fi
 +cat "$logs/detect.log"
 +grep -q 'idcode 0x23751093' "$logs/detect.log" || die 'Expected YPCB XC7K480T IDCODE was not detected.'
 +echo 'PASS: DLC10 initialized and YPCB XC7K480T detected without Vivado.'
-diff --git a/ref/inspur-adventures/scripts/xpcu_stage2.py b/ref/inspur-adventures/scripts/xpcu_stage2.py
+diff --git a/local-overrides/ref-inspur-adventures/files/scripts/xpcu_stage2.py b/local-overrides/ref-inspur-adventures/files/scripts/xpcu_stage2.py
 new file mode 100644
-index 0000000..a019b22
+index 0000000..7ec0699
 --- /dev/null
-+++ b/ref/inspur-adventures/scripts/xpcu_stage2.py
-@@ -0,0 +1,200 @@
++++ b/local-overrides/ref-inspur-adventures/files/scripts/xpcu_stage2.py
+@@ -0,0 +1,211 @@
 +#!/usr/bin/env python3
 +"""Load the XPCU FX2 A3 helper and runtime overlay through Linux usbfs.
 +
@@ -130,6 +133,8 @@ index 0000000..a019b22
 +    base = 0
 +    segment_address = None
 +    segment = bytearray()
++    saw_eof = False
++    saw_data = False
 +
 +    def flush_segment():
 +        nonlocal segment_address, segment
@@ -145,6 +150,8 @@ index 0000000..a019b22
 +            line = line.strip()
 +            if not line or line.startswith("#"):
 +                continue
++            if saw_eof:
++                raise ValueError(f"{path}:{line_no}: record after EOF")
 +            if not line.startswith(":"):
 +                raise ValueError(f"{path}:{line_no}: missing ':'")
 +            try:
@@ -160,6 +167,7 @@ index 0000000..a019b22
 +            record_type = raw[3]
 +            data = raw[4:4 + count]
 +            if record_type == 0x00:
++                saw_data |= count > 0
 +                absolute = base + addr
 +                if absolute + count > 0x10000:
 +                    raise ValueError(f"{path}:{line_no}: address exceeds FX2 range")
@@ -172,7 +180,9 @@ index 0000000..a019b22
 +                    segment_address = absolute
 +                segment.extend(data)
 +            elif record_type == 0x01:
-+                break
++                if count != 0 or addr != 0:
++                    raise ValueError(f"{path}:{line_no}: bad EOF record")
++                saw_eof = True
 +            elif record_type == 0x02:
 +                if count != 2:
 +                    raise ValueError(f"{path}:{line_no}: bad segment record")
@@ -185,6 +195,10 @@ index 0000000..a019b22
 +                continue
 +            else:
 +                raise ValueError(f"{path}:{line_no}: unsupported record type {record_type:02x}")
++    if not saw_eof:
++        raise ValueError(f"{path}: missing EOF record")
++    if not saw_data:
++        raise ValueError(f"{path}: no firmware data")
 +    result = flush_segment()
 +    if result:
 +        yield result
@@ -213,9 +227,9 @@ index 0000000..a019b22
 +        )
 +
 +
-+def write_image(handle, path, request, timeout, predicate=lambda _a, _d: True):
++def write_image(handle, image, request, timeout, predicate=lambda _a, _d: True):
 +    records = bytes_sent = requests = 0
-+    for address, data in parse_ihex(path):
++    for address, data in image:
 +        records += 1
 +        if not predicate(address, data):
 +            continue
@@ -238,8 +252,8 @@ index 0000000..a019b22
 +
 +def load_stage2(helper, overlay, device, timeout, verbose):
 +    # Validate both images before modifying volatile device RAM.
-+    list(parse_ihex(helper))
-+    list(parse_ihex(overlay))
++    helper_image = list(parse_ihex(helper))
++    overlay_image = list(parse_ihex(overlay))
 +    handle = os.open(device, os.O_RDWR | os.O_CLOEXEC)
 +    try:
 +        # Do not claim interface 0.  fxload uses Linux usbfs ioctl directly,
@@ -247,13 +261,13 @@ index 0000000..a019b22
 +        # avoiding a claim preserves that behavior and works with udev rules.
 +        # Stage 1: stop the FX2 CPU and install the generic A3 loader.
 +        control_out(handle, 0xa0, 0xe600, b"\x01", timeout)
-+        r, b, q = write_image(handle, helper, 0xa0, timeout)
++        r, b, q = write_image(handle, helper_image, 0xa0, timeout)
 +        if verbose:
 +            print(f"helper: {r} records, {b} bytes, {q} A0 requests")
 +        control_out(handle, 0xa0, 0xe600, b"\x00", timeout)
 +        # Stage 2a: while the helper runs, write external overlay memory.
 +        r, b, q = write_image(
-+            handle, overlay, 0xa3, timeout,
++            handle, overlay_image, 0xa3, timeout,
 +            lambda address, data: fx2_external(address, len(data)),
 +        )
 +        if verbose:
@@ -262,7 +276,7 @@ index 0000000..a019b22
 +        # Stage 2b: stop the CPU, write internal overlay memory, then run.
 +        control_out(handle, 0xa0, 0xe600, b"\x01", timeout)
 +        r, b, q = write_image(
-+            handle, overlay, 0xa0, timeout,
++            handle, overlay_image, 0xa0, timeout,
 +            lambda address, data: not fx2_external(address, len(data)),
 +        )
 +        if verbose:

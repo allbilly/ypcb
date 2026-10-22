@@ -37,6 +37,8 @@ def parse_ihex(path):
     base = 0
     segment_address = None
     segment = bytearray()
+    saw_eof = False
+    saw_data = False
 
     def flush_segment():
         nonlocal segment_address, segment
@@ -52,6 +54,8 @@ def parse_ihex(path):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
+            if saw_eof:
+                raise ValueError(f"{path}:{line_no}: record after EOF")
             if not line.startswith(":"):
                 raise ValueError(f"{path}:{line_no}: missing ':'")
             try:
@@ -67,6 +71,7 @@ def parse_ihex(path):
             record_type = raw[3]
             data = raw[4:4 + count]
             if record_type == 0x00:
+                saw_data |= count > 0
                 absolute = base + addr
                 if absolute + count > 0x10000:
                     raise ValueError(f"{path}:{line_no}: address exceeds FX2 range")
@@ -79,7 +84,9 @@ def parse_ihex(path):
                     segment_address = absolute
                 segment.extend(data)
             elif record_type == 0x01:
-                break
+                if count != 0 or addr != 0:
+                    raise ValueError(f"{path}:{line_no}: bad EOF record")
+                saw_eof = True
             elif record_type == 0x02:
                 if count != 2:
                     raise ValueError(f"{path}:{line_no}: bad segment record")
@@ -92,6 +99,10 @@ def parse_ihex(path):
                 continue
             else:
                 raise ValueError(f"{path}:{line_no}: unsupported record type {record_type:02x}")
+    if not saw_eof:
+        raise ValueError(f"{path}: missing EOF record")
+    if not saw_data:
+        raise ValueError(f"{path}: no firmware data")
     result = flush_segment()
     if result:
         yield result
@@ -120,9 +131,9 @@ def control_out(handle, request, address, payload, timeout):
         )
 
 
-def write_image(handle, path, request, timeout, predicate=lambda _a, _d: True):
+def write_image(handle, image, request, timeout, predicate=lambda _a, _d: True):
     records = bytes_sent = requests = 0
-    for address, data in parse_ihex(path):
+    for address, data in image:
         records += 1
         if not predicate(address, data):
             continue
@@ -145,8 +156,8 @@ def fx2_external(address, length):
 
 def load_stage2(helper, overlay, device, timeout, verbose):
     # Validate both images before modifying volatile device RAM.
-    list(parse_ihex(helper))
-    list(parse_ihex(overlay))
+    helper_image = list(parse_ihex(helper))
+    overlay_image = list(parse_ihex(overlay))
     handle = os.open(device, os.O_RDWR | os.O_CLOEXEC)
     try:
         # Do not claim interface 0.  fxload uses Linux usbfs ioctl directly,
@@ -154,13 +165,13 @@ def load_stage2(helper, overlay, device, timeout, verbose):
         # avoiding a claim preserves that behavior and works with udev rules.
         # Stage 1: stop the FX2 CPU and install the generic A3 loader.
         control_out(handle, 0xa0, 0xe600, b"\x01", timeout)
-        r, b, q = write_image(handle, helper, 0xa0, timeout)
+        r, b, q = write_image(handle, helper_image, 0xa0, timeout)
         if verbose:
             print(f"helper: {r} records, {b} bytes, {q} A0 requests")
         control_out(handle, 0xa0, 0xe600, b"\x00", timeout)
         # Stage 2a: while the helper runs, write external overlay memory.
         r, b, q = write_image(
-            handle, overlay, 0xa3, timeout,
+            handle, overlay_image, 0xa3, timeout,
             lambda address, data: fx2_external(address, len(data)),
         )
         if verbose:
@@ -169,7 +180,7 @@ def load_stage2(helper, overlay, device, timeout, verbose):
         # Stage 2b: stop the CPU, write internal overlay memory, then run.
         control_out(handle, 0xa0, 0xe600, b"\x01", timeout)
         r, b, q = write_image(
-            handle, overlay, 0xa0, timeout,
+            handle, overlay_image, 0xa0, timeout,
             lambda address, data: not fx2_external(address, len(data)),
         )
         if verbose:

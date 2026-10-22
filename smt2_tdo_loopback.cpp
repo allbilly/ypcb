@@ -25,9 +25,9 @@ bool write_all(ftdi_context *ftdi, const unsigned char *data, int length)
 	while (sent < length) {
 		const int ret = ftdi_write_data(ftdi,
 			const_cast<unsigned char *>(data + sent), length - sent);
-		if (ret < 0) {
+		if (ret <= 0) {
 			std::fprintf(stderr, "FTDI write failed: %s\n",
-				ftdi_get_error_string(ftdi));
+				ret == 0 ? "transfer made no progress" : ftdi_get_error_string(ftdi));
 			return false;
 		}
 		sent += ret;

@@ -3,7 +3,7 @@
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 ofl="$root/openFPGALoader/build-xpcu-debug/openFPGALoader"
-stage2="$root/ref/inspur-adventures/scripts/xpcu_stage2.py"
+stage2="$root/local-overrides/ref-inspur-adventures/files/scripts/xpcu_stage2.py"
 boot="$root/firmware/xusb_xp2-boot.hex"
 overlay="$root/firmware/xusb_xp2-overlay.hex"
 helper="$root/ref/fxload/a3load.hex"

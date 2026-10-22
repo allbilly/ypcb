@@ -27,17 +27,25 @@ static void *real_symbol(void *handle, const char *name)
 void *dlsym(void *handle, const char *name)
 {
 	void *original = real_symbol(handle, name);
+	if (!original)
+		return NULL;
 	if (strcmp(name, "libusb_control_transfer") == 0) {
+		if (original == (void *)libusb_control_transfer)
+			original = real_symbol(RTLD_NEXT, name);
 		real_ctrl = (ctrl_fn_t)original;
-		return (void *)libusb_control_transfer;
+		return original ? (void *)libusb_control_transfer : NULL;
 	}
 	if (strcmp(name, "libusb_reset_device") == 0) {
+		if (original == (void *)libusb_reset_device)
+			original = real_symbol(RTLD_NEXT, name);
 		real_reset = (int (*)(libusb_device_handle *))original;
-		return (void *)libusb_reset_device;
+		return original ? (void *)libusb_reset_device : NULL;
 	}
 	if (strcmp(name, "libusb_submit_transfer") == 0) {
+		if (original == (void *)libusb_submit_transfer)
+			original = real_symbol(RTLD_NEXT, name);
 		real_submit = (int (*)(struct libusb_transfer *))original;
-		return (void *)libusb_submit_transfer;
+		return original ? (void *)libusb_submit_transfer : NULL;
 	}
 	return original;
 }
@@ -59,19 +67,20 @@ int libusb_control_transfer(libusb_device_handle *handle,
 {
 	if (!real_ctrl)
 		real_ctrl = (ctrl_fn_t)real_symbol(RTLD_NEXT, "libusb_control_transfer");
+	if (!real_ctrl)
+		return LIBUSB_ERROR_NOT_SUPPORTED;
 	const int out = !(bmRequestType & LIBUSB_ENDPOINT_IN);
 	const uint32_t out_hash = out && data && wLength ?
 			fnv1a32(data, wLength) : 0;
-	const unsigned int out_first = out && data && wLength ? data[0] : 0;
 	int rc = real_ctrl(handle, bmRequestType, bRequest, wValue,
 			wIndex, data, wLength, timeout);
 	const uint32_t in_hash = !out && rc > 0 && data ?
 			fnv1a32(data, (unsigned int)rc) : 0;
 	if (bRequest == 0xA0 || bRequest == 0xA3) {
 		fprintf(stderr,
-				"DLC10_USB ctrl type=%02x req=%02x value=%04x index=%04x len=%u timeout=%u rc=%d hash=%08x first=%02x\n",
+				"DLC10_USB ctrl type=%02x req=%02x value=%04x index=%04x len=%u timeout=%u rc=%d hash=%08x\n",
 				bmRequestType, bRequest, wValue, wIndex, wLength,
-				timeout, rc, out ? out_hash : in_hash, out_first);
+					timeout, rc, out ? out_hash : in_hash);
 		fflush(stderr);
 	}
 	return rc;
@@ -82,6 +91,8 @@ int libusb_reset_device(libusb_device_handle *handle)
 	if (!real_reset)
 		real_reset = (int (*)(libusb_device_handle *))real_symbol(
 				RTLD_NEXT, "libusb_reset_device");
+	if (!real_reset)
+		return LIBUSB_ERROR_NOT_SUPPORTED;
 	fprintf(stderr, "DLC10_USB reset begin\n");
 	int rc = real_reset(handle);
 	fprintf(stderr, "DLC10_USB reset rc=%d\n", rc);
@@ -94,6 +105,8 @@ int libusb_submit_transfer(struct libusb_transfer *transfer)
 	if (!real_submit)
 		real_submit = (int (*)(struct libusb_transfer *))real_symbol(
 				RTLD_NEXT, "libusb_submit_transfer");
+	if (!real_submit)
+		return LIBUSB_ERROR_NOT_SUPPORTED;
 	if (transfer && transfer->type == LIBUSB_TRANSFER_TYPE_CONTROL) {
 		struct libusb_control_setup *setup =
 				libusb_control_transfer_get_setup(transfer);
@@ -104,12 +117,11 @@ int libusb_submit_transfer(struct libusb_transfer *transfer)
 		const uint32_t hash = !(setup->bmRequestType & LIBUSB_ENDPOINT_IN) &&
 				data && len ? fnv1a32(data, len) : 0;
 		fprintf(stderr,
-				"DLC10_USB submit-ctrl type=%02x req=%02x value=%04x index=%04x len=%u timeout=%u hash=%08x first=%02x\n",
+				"DLC10_USB submit-ctrl type=%02x req=%02x value=%04x index=%04x len=%u timeout=%u hash=%08x\n",
 				setup->bmRequestType, setup->bRequest,
 				libusb_le16_to_cpu(setup->wValue),
 				libusb_le16_to_cpu(setup->wIndex), len,
-				transfer->timeout, hash,
-				data && len ? data[0] : 0);
+				transfer->timeout, hash);
 		fflush(stderr);
 	}
 	return real_submit(transfer);

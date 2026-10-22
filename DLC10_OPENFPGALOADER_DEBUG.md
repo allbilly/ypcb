@@ -1,18 +1,50 @@
 # DLC10 / openFPGALoader firmware-init handoff
 
-Started: 2026-09-16; updated: 2026-09-17. Board: YPCB-00338 / XC7K480T. Cable: Xilinx Platform Cable USB II (DLC10). Host: Fedora 44, kernel `7.0.9-205.fc44.x86_64`.
+Started: 2026-09-16; source review updated: 2026-10-23. Board: YPCB-00338 / XC7K480T. Cable: Xilinx Platform Cable USB II (DLC10). Historical test host: Fedora 44, kernel `7.0.9-205.fc44.x86_64`.
+
+## Current source and offline checks
+
+The 2026-10-23 review corrected the USB trace interposer's recursive default
+symbol lookup and removed its `first=` payload-byte fields. Earlier tracer
+versions logged one leading byte per firmware transfer as well as its hash;
+they did not capture complete payloads. The current tracer logs metadata and
+hashes, and does not inspect an asynchronous IN payload before completion.
+The SMT2 utility now fails promptly if a write makes no progress.
+
+`dlc10-init.sh` now uses the tracked helper at
+`local-overrides/ref-inspur-adventures/files/scripts/xpcu_stage2.py`, so fixes
+take effect without overwriting the independent `ref/inspur-adventures` clone.
+The helper rejects empty, truncated and malformed-EOF images before opening
+the USB node, then uploads the exact records it validated. Both
+`dlc10-fedora-wrapper.patch` and `dlc10-fedora-python-stage2.patch` contain the
+same current wrapper and helper; they are alternative packaging copies, so
+apply only one to an empty destination. They retain the CPLD chain declaration
+and the guard against a running openFPGALoader process.
+
+The offline regression suite compiles mocked USB/FTDI callers and checks both
+packaging patches in temporary Git repositories. It requires Python 3, Git,
+C/C++ compilers, and libusb/libftdi development headers:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p test_dlc10_tools.py -v
+```
+
+All 11 tests passed. No USB/JTAG access, firmware upload, FPGA build or board
+programming was performed in this review. The hardware results below describe
+the older implementation and do not qualify these source revisions or the
+current cable/board state. Historical `/tmp` log paths may no longer exist.
 
 ## Fedora answer: source fix versus working procedure
 
 **Latest Python cold-start test (2026-09-17): PASSED.** Physical replug was confirmed as `03fd:0013`, bus 001 device 048. Running `bash dlc10-init.sh` directly, without fxload or Vivado, transitioned to `03fd:0008` device 049 and detected `status 43`, IDCODE `0x23751093`, XC7K480T, IR length 6; wrapper exit 0. Logs: `/tmp/dlc10-init.dys11v/{boot,overlay,detect}.log`. This verifies one complete cold cycle with the current Python usbfs implementation. Earlier failures remain unexplained; this result does not establish that the transport change caused recovery. The comparisons below are historical.
 
-**Latest controlled comparison (2026-09-17): reference cold start PASSED; Python warm reload PASSED.** Confirmed physical replug as `03fd:0013`, bus 001 device 046. Reference boot upload followed by `ref/fxload/fxload -v -t fx2 -D /dev/bus/usb/001/047 -s ref/fxload/a3load.hex -I firmware/xusb_xp2-overlay.hex` produced `status 43`, IDCODE `0x23751093`, XC7K480T, detection exit 0. Logs: `/tmp/dlc10-fxload-cold.GZiATu/`. Running the current Python `bash dlc10-init.sh` on that working runtime state also passed with the same status and IDCODE; logs: `/tmp/dlc10-init.kocFSd/`. Python can therefore reload an already working cable, but this does not establish reliable Python cold initialization or explain the preceding failures. Another fresh physical replug is needed to test the current Python implementation independently of fxload.
+**Earlier controlled comparison (2026-09-17): reference cold start PASSED; Python warm reload PASSED.** Confirmed physical replug as `03fd:0013`, bus 001 device 046. Reference boot upload followed by `ref/fxload/fxload -v -t fx2 -D /dev/bus/usb/001/047 -s ref/fxload/a3load.hex -I firmware/xusb_xp2-overlay.hex` produced `status 43`, IDCODE `0x23751093`, XC7K480T, detection exit 0. Logs: `/tmp/dlc10-fxload-cold.GZiATu/`. Running the current Python `bash dlc10-init.sh` on that working runtime state also passed with the same status and IDCODE; logs: `/tmp/dlc10-init.kocFSd/`. Python can therefore reload an already working cable, but this does not establish reliable Python cold initialization or explain the preceding failures. Another fresh physical replug is needed to test the current Python implementation independently of fxload.
 
-**Latest Python test (2026-09-17): FAILED final JTAG detection.** Following a physical replug at `03fd:0013` device 043, the wrapper reached `03fd:0008` device 045. The revised Python helper uses direct Linux `USBDEVFS_CONTROL` ioctls, matching fxload's transport, and completed all 10 helper A0, 28 external A3, and 74 internal A0 requests. Firmware version was `6109`, but status remained `00` and IDCODE was zero. Logs: `/tmp/dlc10-init.PiDSY5/`. Running reference fxload on that same warm state also completed but did not restore detection (`/tmp/dlc10-fxload-comparison.log`). This does not prove a Python-specific failure or validate the replacement. The next discriminating test needs a fresh replug with reference fxload, with board power and JTAG connection checked. Current patch files are experimental, not ready for a success claim or upstream PR.
+**Earlier Python test (2026-09-17): FAILED final JTAG detection.** Following a physical replug at `03fd:0013` device 043, the wrapper reached `03fd:0008` device 045. The revised Python helper uses direct Linux `USBDEVFS_CONTROL` ioctls, matching fxload's transport, and completed all 10 helper A0, 28 external A3, and 74 internal A0 requests. Firmware version was `6109`, but status remained `00` and IDCODE was zero. Logs: `/tmp/dlc10-init.PiDSY5/`. Running reference fxload on that same warm state also completed but did not restore detection (`/tmp/dlc10-fxload-comparison.log`). This does not prove a Python-specific failure or validate the replacement. The next discriminating test needs a fresh replug with reference fxload, with board power and JTAG connection checked. Current patch files are experimental, not ready for a success claim or upstream PR.
 
 The upstream `openFPGALoader` cold firmware path is **not fixed yet**. Its existing `--probe-firmware` implementation accepts one HEX file, asserts CPUCS, sends every record with A0, releases CPUCS, and waits for `03fd:0008`. That is sufficient for cables whose HEX is a single internal-RAM image. This YPCB cable needs a staged sequence: reference boot image through A0, re-enumeration, `a3load.hex` helper, then the runtime overlay split between A3 external-memory writes and A0 internal-memory writes. Adding that behavior is a protocol/API change, not a ten-line edit.
 
-The tested Fedora solution is a wrapper, not a modified upstream driver. `dlc10-init.sh` runs the existing openFPGALoader binary for the boot image and final JTAG scan, and uses `ref/inspur-adventures/scripts/xpcu_stage2.py` for the helper/overlay stage. That Python helper uses Linux usbfs control transfers and does not require the `fxload` executable. `dlc10-fedora-wrapper.patch` adds both files; it does not embed the proprietary HEX files. It expects the paths and SHA-256-checked files documented below. The Python replacement has now passed both warm reload and one physical cold-start detection test.
+The tested Fedora solution is a wrapper, not a modified upstream driver. `dlc10-init.sh` runs the existing openFPGALoader binary for the boot image and final JTAG scan, and uses the tracked helper described above for the helper/overlay stage (historically copied to `ref/inspur-adventures/scripts/xpcu_stage2.py`). That Python helper uses Linux usbfs control transfers and does not require the `fxload` executable. `dlc10-fedora-wrapper.patch` adds both files; it does not embed the proprietary HEX files. It expects the paths and SHA-256-checked files documented below. The Python replacement has now passed both warm reload and one physical cold-start detection test.
 
 No PR has been opened. A PR for a ten-line change would be misleading because the ten-line candidate concerns macOS bulk-read behavior, not this Fedora cold-start failure. The appropriate upstream contribution would first need an agreed interface for selecting a boot image, helper, and overlay (and a decision about the proprietary helper firmware); until then, the wrapper is the verified Fedora solution.
 
@@ -20,7 +52,7 @@ No PR has been opened. A PR for a ten-line change would be misleading because th
 
 **Scope clarification:** this verifies a non-Vivado Fedora workflow; it does not mean the upstream single-image openFPGALoader firmware path has been fixed. The local openFPGALoader source changes in this worktree add diagnostics and strict transfer/error checks only. The working cold-start command is a wrapper: openFPGALoader loads the matching boot image, the Python usbfs helper loads the A3 helper plus runtime overlay, and the unchanged openFPGALoader JTAG path performs the final detection.
 
-No USB packet replay was used. `dlc10_usb_trace.so` intercepted Vivado's libusb calls only to record request addresses, lengths, return codes, and payload hashes; it never replayed packets and did not capture firmware payload bytes. The non-Vivado sequence sends staged Intel-HEX files through libusb in openFPGALoader and Linux usbfs ioctls in the Python helper.
+No USB packet replay was used. `dlc10_usb_trace.so` intercepted Vivado's libusb calls only to record request addresses, lengths, return codes, and payload hashes; it never replayed packets or captured complete firmware payloads; the old tracer did log each transfer's first byte. The non-Vivado sequence sends staged Intel-HEX files through libusb in openFPGALoader and Linux usbfs ioctls in the Python helper.
 
 **A complete manual cold-start sequence succeeded without Vivado.** After the user replugged, the cable was `03fd:0013`, bus 001 device 034; no `hw_server` or XSDB was running.
 
@@ -98,7 +130,7 @@ The reference standalone loader (`ref/inspur-adventures/scripts/xpcu_descriptor.
 
 ## Vivado USB trace: key difference
 
-An `LD_PRELOAD` libusb tracer (`dlc10_usb_trace.c`) captured a successful Vivado `hw_server` cold initialization that changed `03fd:0013` to `03fd:0008` and exposed `xc7k480t` to XSDB. The tracer records request metadata and FNV-1a hashes, **not firmware payload bytes**. It had to wrap `dlsym()` because `hw_server` resolves libusb through an explicit library handle. The first capture was output-truncated, so it is evidence of the following steps, **not yet a complete packet list**:
+An `LD_PRELOAD` libusb tracer (`dlc10_usb_trace.c`) captured a successful Vivado `hw_server` cold initialization that changed `03fd:0013` to `03fd:0008` and exposed `xc7k480t` to XSDB. That tracer recorded request metadata, FNV-1a hashes and a leading payload byte per transfer; the current source removes the payload-byte fields. It had to wrap `dlsym()` because `hw_server` resolves libusb through an explicit library handle. The first capture was output-truncated, so it is evidence of the following steps, **not yet a complete packet list**:
 
 ```text
 OUT A0 E600 len=1 data=01              # hold FX2 CPU
@@ -145,7 +177,7 @@ The local `openFPGALoader/src/fx2_ll.cpp` now logs the following at `--verbose-l
 - CPUCS reset assertion/release (including `data=01` / `data=00`) and each FX2 `0xA0` firmware control-write address, requested length, actual returned length, and 100 ms timeout;
 - USB devices remaining after a timeout.
 
-It also treats a short USB control write or HEX parse failure as an error instead of silently proceeding, and removes a misleading `reset()` error message that passed a boolean-style result to `libusb_error_name()`. This local source **already checked** `if (!load_firmware(...))` before the 100-second poll; it did not ignore the loader's return value. The XPCU driver passes its verbose level into the FX2 loader. These diagnostics were exercised in the cold-plug result above; the cable is currently initialized as `03fd:0008`.
+It also treats a short USB control write or HEX parse failure as an error instead of silently proceeding, and removes a misleading `reset()` error message that passed a boolean-style result to `libusb_error_name()`. This local source **already checked** `if (!load_firmware(...))` before the 100-second poll; it did not ignore the loader's return value. The XPCU driver passes its verbose level into the FX2 loader. These diagnostics were exercised in the cold-plug result above; the cable was initialized as `03fd:0008` at that historical test.
 
 The separate `build-xpcu-debug` binary compiled successfully. A safe test against the already-initialized cable printed `FX2 USB before firmware: 03fd:0008 bus=1 address=23` and detected the one FPGA with raw IDCODE `0x23751093`. At a requested 500 kHz, this driver selected 750 kHz actual JTAG frequency. This verifies the diagnostic binary's post-init path, **not** its cold firmware-upload path.
 

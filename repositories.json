@@ -41,8 +41,8 @@
         {
           "path": "scripts/xpcu_stage2.py",
           "copy": "local-overrides/ref-inspur-adventures/files/scripts/xpcu_stage2.py",
-          "bytes": 7680,
-          "sha256": "fe4daf4c6d4f17d79d3980001df1c0a5a13ce37da27006bbd715c7c25a62c0d7"
+          "bytes": 8172,
+          "sha256": "5e9eef9fa964ead39d683fafee8d009394a790bc5ea81d4ef12771c6dba83de1"
         }
       ],
       "omitted_untracked_non_source": [
