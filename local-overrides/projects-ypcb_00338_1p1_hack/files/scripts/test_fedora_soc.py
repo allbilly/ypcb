@@ -3,11 +3,13 @@ import unittest
 from pathlib import Path
 import shutil
 import socket
+import struct
 import subprocess
 import tempfile
 import threading
 import time
 from fedora_soc import validate_uart, validate_peripheral_uart, validate_full_ddr_uart
+from build_fedora_microblaze import elf_check
 
 
 def completed_transcript():
@@ -31,6 +33,52 @@ def full_ddr_transcript():
             + "".join(f"DDR FULL PASS ch={ch} pattern={pattern} bytes=2147483648\r\n"
                       for pattern in (0, 1) for ch in (0, 1))
             + "DDR FULL RESULT PASS checks=4 bytes_per_channel=2147483648\r\n")
+
+
+class ElfAcceptance(unittest.TestCase):
+    def check_image(self, *, address=0, filesz=16, memsz=32, flags=5,
+                    phoff=52, phentsize=32, phnum=1, truncate=None, machine=189):
+        data = bytearray(128)
+        data[:7] = b"\x7fELF\x01\x01\x01"
+        struct.pack_into("<HHIIIIIHHHHHH", data, 16,
+                         2, machine, 1, 0, phoff, 0, 0, 52, phentsize, phnum, 0, 0, 0)
+        struct.pack_into("<8I", data, 52,
+                         1, 84, address, address, filesz, memsz, flags, 4)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "test.elf"
+            path.write_bytes(data if truncate is None else data[:truncate])
+            return elf_check(path)
+
+    def test_valid_bram_executable(self):
+        self.assertEqual(self.check_image()["loads"],
+                         [{"address": 0, "file_bytes": 16, "memory_bytes": 32}])
+
+    def test_file_payload_cannot_exceed_memory_size(self):
+        # This previously passed the BRAM bound despite file data crossing it.
+        with self.assertRaisesRegex(RuntimeError, "512 KiB BRAM"):
+            self.check_image(address=0x7fff0, filesz=32, memsz=16)
+
+    def test_memory_or_file_bounds_rejected(self):
+        for arguments in ({"address": 0x7fff0, "memsz": 32},
+                          {"filesz": 64, "memsz": 64}):
+            with self.subTest(arguments=arguments), self.assertRaises(RuntimeError):
+                self.check_image(**arguments)
+
+    def test_malformed_program_headers_rejected(self):
+        for arguments in ({"phoff": 16}, {"phoff": 100}, {"phentsize": 0},
+                          {"phentsize": 31}, {"phnum": 0}, {"phnum": 65535}):
+            with self.subTest(arguments=arguments), self.assertRaises(RuntimeError):
+                self.check_image(**arguments)
+
+    def test_truncated_header_or_table_rejected(self):
+        for size in (0, 7, 51, 70, 83):
+            with self.subTest(size=size), self.assertRaises(RuntimeError):
+                self.check_image(truncate=size)
+
+    def test_reset_vector_requires_executable_file_data(self):
+        for arguments in ({"address": 4}, {"filesz": 0}, {"flags": 6}, {"machine": 62}):
+            with self.subTest(arguments=arguments), self.assertRaises(RuntimeError):
+                self.check_image(**arguments)
 
 
 class FullDdrAcceptance(unittest.TestCase):
@@ -62,9 +110,31 @@ class FullDdrAcceptance(unittest.TestCase):
 
     def test_additional_wrong_scope_test_rejected(self):
         for extra in ("DDR FULL BEGIN bytes_per_channel=4096 patterns=2\r\n",
-                      "DDR FULL RESULT PASS checks=1 bytes_per_channel=4096\r\n"):
+                      "DDR FULL RESULT PASS checks=1 bytes_per_channel=4096\r\n",
+                      "DDR BEGIN bytes_per_channel=4096\r\n",
+                      "DDR RESULT PASS checks=6\r\n"):
             with self.subTest(extra=extra), self.assertRaises(RuntimeError):
                 validate_full_ddr_uart(full_ddr_transcript() + extra)
+
+    def test_prefixed_or_partial_marker_rejected(self):
+        text = full_ddr_transcript()
+        for line in text.splitlines(keepends=True):
+            with self.subTest(line=line), self.assertRaises(RuntimeError):
+                validate_full_ddr_uart(text.replace(line, "noise " + line))
+        with self.assertRaises(RuntimeError):
+            validate_full_ddr_uart(text.rstrip())
+
+    def test_progress_lines_remain_allowed(self):
+        validate_full_ddr_uart(full_ddr_transcript().replace(
+            "DDR FULL PASS ch=0 pattern=0", "DDR FULL PROGRESS ch=0 pattern=0 phase=READ bytes=67108864\r\n"
+            "DDR FULL PASS ch=0 pattern=0"))
+
+    def test_appended_prefixed_markers_rejected(self):
+        text = full_ddr_transcript()
+        validate_full_ddr_uart("UART connected\n" + text + "UART disconnected\n")
+        for line in text.splitlines(keepends=True):
+            with self.subTest(line=line), self.assertRaises(RuntimeError):
+                validate_full_ddr_uart(text + "noise " + line)
 
 
 class Acceptance(unittest.TestCase):
@@ -97,6 +167,43 @@ class Acceptance(unittest.TestCase):
     def test_generic_upstream_completion_is_insufficient(self):
         with self.assertRaises(RuntimeError):
             validate_uart("Successfully ran Memory Test Application.\r\n")
+
+    def test_ready_marker_required_and_all_markers_unique(self):
+        text = completed_transcript()
+        for line in text.splitlines(keepends=True):
+            for corrupt in (text.replace(line, ""), text + line):
+                with self.subTest(line=line), self.assertRaises(RuntimeError):
+                    validate_uart(corrupt)
+
+    def test_appended_prefixed_markers_rejected(self):
+        text = completed_transcript()
+        validate_uart("UART connected\n" + text + "UART disconnected\n")
+        for line in text.splitlines(keepends=True):
+            with self.subTest(line=line), self.assertRaises(RuntimeError):
+                validate_uart(text + "noise " + line)
+
+    def test_out_of_order_results_rejected(self):
+        lines = completed_transcript().splitlines(keepends=True)
+        for index in range(len(lines) - 1):
+            changed = lines.copy()
+            changed[index], changed[index + 1] = changed[index + 1], changed[index]
+            with self.subTest(index=index), self.assertRaises(RuntimeError):
+                validate_uart("".join(changed))
+
+    def test_additional_wrong_scope_test_rejected(self):
+        for extra in ("DDR BEGIN bytes_per_channel=16\n", "DDR RESULT PASS checks=0\n",
+                      "DDR CH2 32-bit PASS\n", "DDR FULL BEGIN bytes_per_channel=16\n",
+                      "DDR FULL RESULT PASS checks=0\n"):
+            with self.subTest(extra=extra), self.assertRaises(RuntimeError):
+                validate_uart(completed_transcript() + extra)
+
+    def test_prefixed_or_partial_marker_rejected(self):
+        text = completed_transcript()
+        for line in text.splitlines(keepends=True):
+            with self.subTest(line=line), self.assertRaises(RuntimeError):
+                validate_uart(text.replace(line, "noise " + line))
+        with self.assertRaises(RuntimeError):
+            validate_uart(text.rstrip())
 
 
 class PeripheralAcceptance(unittest.TestCase):
@@ -136,6 +243,19 @@ class PeripheralAcceptance(unittest.TestCase):
     def test_peripheral_output_does_not_prove_ddr(self):
         with self.assertRaises(RuntimeError):
             validate_uart(peripheral_transcript())
+
+    def test_menu_prefix_response_order_and_partial_line_rejected(self):
+        text = peripheral_transcript()
+        menu, response = text.split("Temperature:")
+        for corrupt in ("noise " + text, "Temperature:" + response + menu, text.rstrip()):
+            with self.subTest(text=corrupt), self.assertRaises(RuntimeError):
+                validate_peripheral_uart(corrupt)
+
+    def test_appended_prefixed_menu_rejected(self):
+        text = peripheral_transcript()
+        menu = text.split("Temperature:")[0]
+        with self.assertRaises(RuntimeError):
+            validate_peripheral_uart(text + "noise " + menu)
 
 
 @unittest.skipUnless(shutil.which("tclsh"), "Tcl interpreter unavailable")

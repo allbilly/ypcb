@@ -74,22 +74,30 @@ exec "$toolchain/sysroot/usr/bin/microblaze-xilinx-elf-gcc" -isystem "$toolchain
 
 def elf_check(path):
     data = path.read_bytes()
-    if data[:7] != b"\x7fELF\x01\x01\x01":
+    if len(data) < 52 or data[:7] != b"\x7fELF\x01\x01\x01":
         raise RuntimeError("Expected ELF32 little-endian")
     header = struct.unpack_from("<HHIIIIIHHHHHH", data, 16)
-    etype, machine, _, entry, phoff = header[:5]
-    if etype != 2 or machine != 189 or entry != 0:
+    etype, machine, version, entry, phoff = header[:5]
+    if etype != 2 or machine != 189 or version != 1 or entry != 0:
         raise RuntimeError("Expected MicroBlaze executable with reset vector entry")
+    if (header[7] != 52 or header[8] != 32 or not header[9]
+            or phoff < 52 or phoff + header[9] * header[8] > len(data)):
+        raise RuntimeError("Invalid ELF header or program-header table")
     loads = []
+    executable_entry = False
     for i in range(header[9]):
         segment = struct.unpack_from("<8I", data, phoff + i * header[8])
         if segment[0] == 1:
-            _, offset, vaddr, paddr, filesz, memsz, _, _ = segment
-            if vaddr != paddr or paddr + memsz > 0x80000 or offset + filesz > len(data):
+            _, offset, vaddr, paddr, filesz, memsz, flags, _ = segment
+            if (filesz > memsz or vaddr != paddr or paddr + memsz > 0x80000
+                    or offset + filesz > len(data)):
                 raise RuntimeError("ELF load segments must fit the supplied 512 KiB BRAM")
+            executable_entry |= bool(flags & 1) and paddr <= entry < paddr + filesz
             loads.append({"address": paddr, "file_bytes": filesz, "memory_bytes": memsz})
     if not loads:
         raise RuntimeError("ELF has no loadable segments")
+    if not executable_entry:
+        raise RuntimeError("ELF reset vector must be backed by executable file data")
     return {"path": str(path), "sha256": sha(path), "loads": loads}
 
 

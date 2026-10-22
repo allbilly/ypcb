@@ -61,32 +61,43 @@ def verify_artifacts(elf=ELF):
     return manifest
 
 
+def _validate_marker_sequence(text, markers, prefixes):
+    # Compare complete lines so prefixed text, partial lines, extra tests and
+    # reordered output cannot be mistaken for one completed firmware run.
+    observed = [line for line in text.splitlines(keepends=True)
+                if any(prefix in line for prefix in prefixes)]
+    if observed != markers:
+        raise RuntimeError("Diagnostic markers missing, duplicated, incomplete or out of order")
+
+
 def validate_uart(transcript):
     text = transcript.replace("\r", "")
-    if "YPCB CPU READY diag=1 addr_bits=36\n" not in text or "CPU BRAM PASS bytes=4096\n" not in text:
-        raise RuntimeError("CPU/BRAM ready markers missing")
-    if re.search(r"\bFAIL(?:ED)?\b", text):
+    if re.search(r"\bFAIL(?:ED)?\b", text, re.IGNORECASE):
         raise RuntimeError("CPU/DDR transcript reports a failure")
-    if text.count("DDR BEGIN bytes_per_channel=4096\n") != 1:
-        raise RuntimeError("Expected exactly one DDR test")
-    for ch in (0, 1):
-        for width in (32, 16, 8):
-            if text.count(f"DDR CH{ch} {width}-bit PASS\n") != 1:
-                raise RuntimeError(f"DDR CH{ch} {width}-bit result missing or duplicated")
-    if text.count("DDR RESULT PASS checks=6\n") != 1:
-        raise RuntimeError("DDR final result missing or duplicated")
+    markers = ["YPCB CPU READY diag=1 addr_bits=36\n", "CPU BRAM PASS bytes=4096\n",
+               "READY FOR DDR send=m\n", "DDR BEGIN bytes_per_channel=4096\n"]
+    markers.extend(f"DDR CH{ch} {width}-bit PASS\n"
+                   for ch in (0, 1) for width in (32, 16, 8))
+    markers.append("DDR RESULT PASS checks=6\n")
+    _validate_marker_sequence(text, markers,
+                              ("YPCB CPU READY", "CPU BRAM", "READY FOR DDR",
+                               "DDR BEGIN", "DDR CH", "DDR RESULT",
+                               "READY FOR FULL DDR", "DDR FULL BEGIN",
+                               "DDR FULL PASS", "DDR FULL RESULT"))
 
 
 def validate_peripheral_uart(transcript):
     text = transcript.replace("\r", "")
     menu = "Press 'r','g','y' to toggle LEDs. Press 'm' to run memory test. 't' to get temperature.\n"
-    if text.count(menu) != 1:
+    if text.count(menu) != 1 or text.splitlines(keepends=True).count(menu) != 1:
         raise RuntimeError("Original application's UART menu missing or duplicated")
     if re.search(r"\bFAIL(?:ED)?\b|Temperature Sensor Error", text, re.IGNORECASE):
         raise RuntimeError("Peripheral transcript reports an initialization or sensor failure")
-    values = re.findall(r"^Temperature: (\d+)\.(\d{1,2})C$", text, re.MULTILINE)
+    values = re.findall(r"^Temperature: (\d+)\.(\d{1,2})C\n", text, re.MULTILINE)
     if len(values) != 1 or text.count("Temperature:") != 1:
         raise RuntimeError("Expected exactly one complete LM73 temperature response")
+    if text.find("Temperature:") < text.find(menu):
+        raise RuntimeError("Temperature response precedes the original application's menu")
     # memorytest.c prints an unpadded integer number of hundredths after '.'.
     whole, hundredths = map(int, values[0])
     if whole > 511 or hundredths > 99:
@@ -98,7 +109,7 @@ def validate_peripheral_uart(transcript):
 
 def validate_full_ddr_uart(transcript):
     text = transcript.replace("\r", "")
-    if re.search(r"\bFAIL(?:ED)?\b", text):
+    if re.search(r"\bFAIL(?:ED)?\b", text, re.IGNORECASE):
         raise RuntimeError("Full-capacity DDR transcript reports a failure")
     if text.count("DDR FULL BEGIN ") != 1 or text.count("DDR FULL RESULT ") != 1:
         raise RuntimeError("Expected exactly one complete full-capacity DDR test")
@@ -108,13 +119,10 @@ def validate_full_ddr_uart(transcript):
     markers.extend(f"DDR FULL PASS ch={channel} pattern={pattern} bytes=2147483648\n"
                    for pattern in (0, 1) for channel in (0, 1))
     markers.append("DDR FULL RESULT PASS checks=4 bytes_per_channel=2147483648\n")
-    previous = -1
-    for marker in markers:
-        if text.count(marker) != 1 or text.find(marker) <= previous:
-            raise RuntimeError("Full-capacity DDR result missing, duplicated or out of order: " + marker.strip())
-        previous = text.find(marker)
-    if len(re.findall(r"^DDR FULL PASS ", text, re.MULTILINE)) != 4:
-        raise RuntimeError("Unexpected full-capacity DDR result count")
+    _validate_marker_sequence(text, markers,
+                              ("YPCB CPU READY", "CPU BRAM", "READY FOR FULL DDR",
+                               "DDR FULL BEGIN", "DDR FULL PASS", "DDR FULL RESULT",
+                               "READY FOR DDR", "DDR BEGIN", "DDR CH", "DDR RESULT"))
 
 
 def cable_present():

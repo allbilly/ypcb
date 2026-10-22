@@ -6,6 +6,17 @@ MicroBlaze, AXI, local BRAM, dual-channel MIG, MDM JTAG UART, GPIO, I²C and XDM
 The author describes the example and tool imports in the
 [board article](https://www.tiferking.cn/index.php/2024/12/19/650/).
 
+The examples use the YPCB workspace and its independent sibling checkouts.
+Override these defaults for a different layout, then run the project commands
+from the MicroBlaze checkout:
+
+```sh
+export YPCB_ROOT="${YPCB_ROOT:-$HOME/ypcb}"
+export BONETTO_CHECKOUT="${BONETTO_CHECKOUT:-$YPCB_ROOT/../bonetto-soc}"
+export OPENTPU_ROOT="${OPENTPU_ROOT:-$YPCB_ROOT/../openTPU}"
+cd "$YPCB_ROOT/projects/ypcb_00338_1p1_hack"
+```
+
 ## Verified supplied artifacts
 
 The local source revision is `8b13ecf71b7061dd43a2b1580f0caa469f64303f`.
@@ -25,7 +36,7 @@ fresh PASS report is `build/fedora-baseline/vivado-bitstream-check-live-20261010
 Re-run it with a fresh report path:
 
 ```sh
-python3 ${YPCB_ROOT}/projects/bonetto-soc/scripts/fedora-check-vivado-bitstream.py \
+python3 "$BONETTO_CHECKOUT/scripts/fedora-check-vivado-bitstream.py" \
   --bit build/fedora-baseline/hardware/top_wrapper.bit \
   --expected-sha256 22e7281f7574d4e56153ce7345d9e0fb0044c80d56075e45724adcb496337931 \
   --out "build/fedora-baseline/vivado-bitstream-check-$(date -u +%Y%m%dT%H%M%SZ).json"
@@ -34,7 +45,7 @@ python3 ${YPCB_ROOT}/projects/bonetto-soc/scripts/fedora-check-vivado-bitstream.
 Stage and hash-check the archives without changing their contents:
 
 ```sh
-cd ${YPCB_ROOT}/projects/ypcb_00338_1p1_hack
+cd "$YPCB_ROOT/projects/ypcb_00338_1p1_hack"
 python3 scripts/prepare_fedora_baseline.py
 ```
 
@@ -106,7 +117,7 @@ and extracts them under `build/fedora-toolchain/`; it does not install system
 packages. Its GCC wrapper supplies the relocated newlib headers and multilibs.
 
 ```sh
-cd ${YPCB_ROOT}/projects/ypcb_00338_1p1_hack
+cd "$YPCB_ROOT/projects/ypcb_00338_1p1_hack"
 python3 scripts/build_fedora_microblaze.py
 python3 scripts/fedora_soc.py check
 ```
@@ -124,6 +135,8 @@ The resulting `build/fedora-microblaze/` contains:
 
 Both executables are ELF32 little-endian MicroBlaze images with entry at the
 reset vector and every load segment inside the hardware's 512 KiB local BRAM.
+The checker rejects malformed or truncated headers, segments whose file data
+exceeds their memory size, and reset vectors without executable file data.
 The build checks that their disassemblies contain all six extended-address
 load/store opcodes used by the memory tests. No special compiler flag makes C
 pointers 36-bit: the supplied BSP's split high/low addresses and `*ea`
@@ -194,11 +207,12 @@ directory. HSI is absent and its optional import fails normally; the installed
 tools are unchanged. Real XSDB version/help and a real connection to an owned
 `hw_server` passed. HSI/BSP generation is not provided by this launcher.
 
-No DLC10 cable was present during preparation. No physical CPU/DDR run has
-been performed. The intended first connection is a separately powered board
-with JTAG only.
-The 12:45 HKT USB recheck showed no Digilent/Xilinx/FTDI adapter; no DLC10/JTAG
-adapter was enumerated.
+During the initial preparation and the 2026-10-10 12:45 HKT USB check, no
+Digilent/Xilinx/FTDI JTAG adapter was enumerated. Later that day, the supplied
+image was loaded into SRAM and the diagnostic ELF was downloaded through JTAG,
+but the UART timed out during CPU startup, as recorded under Current host status.
+There is no successful CPU diagnostic or DDR result from that attempt. The
+intended bring-up connection remains a separately powered board with JTAG only.
 
 The host preflight was rerun on 2026-10-10 at 12:44 HKT for `ddr_diag`,
 `systest` and `ddr_full`. All three reported `HOST_READY` and
@@ -259,7 +273,7 @@ absent and actual CPU/UART/DDR operation. Repeat the static review with
 After the physical Bonetto BRAM test passes:
 
 ```sh
-cd ${YPCB_ROOT}/projects/ypcb_00338_1p1_hack
+cd "$YPCB_ROOT/projects/ypcb_00338_1p1_hack"
 python3 scripts/fedora_soc.py run
 ```
 
@@ -272,20 +286,29 @@ Bonetto XVC server or hardware server that owns this cable at the same time.
 
 Each run creates a fresh `build/fedora-microblaze/hardware-*/` directory with
 programming, server, XSDB and UART logs plus a `result.json` which moves from
-`RUNNING` to `PASS` or `FAIL`. PASS requires the CPU and local BRAM markers,
-exactly one result for every channel/width combination, no failure marker and
-the final six-check PASS marker. Missing or incomplete output fails. The UART
+`RUNNING` to `PASS` or `FAIL`. PASS requires the CPU, local BRAM, ready and begin
+markers, exactly one result for every channel/width combination, no failure
+marker and the final six-check PASS marker, all as complete lines in order.
+Missing, incomplete, prefixed or extra diagnostic results fail. The UART
 validator was checked with synthetic valid and deliberately corrupt transcripts;
 that check is host-only evidence, not a hardware result.
 
 Rerun the host acceptance tests with `python3 scripts/test_fedora_soc.py`.
-The latest run, at 10:54 HKT on 2026-10-10, passed all 28 checks; its output is
+The historical run at 10:54 HKT on 2026-10-10 passed all 28 checks; its output is
 saved as `build/fedora-microblaze/test-fedora-soc-live-20261010T1054HKT.log`,
 SHA256 `650944a28dd31b98ba836b0b1e30c415f86f5ec65c67045e54616bd3faf76a1f`.
 The suite covers strict diagnostic and full-capacity DDR transcript acceptance,
 peripheral UART parsing, and the Tcl runner with fake XSDB commands and a local
 UART socket, including fragmented replies and timeout cleanup. It does not
 establish a physical CPU, DDR, I²C or LED result.
+
+The exported source was reviewed on 2026-10-23. All 45 host acceptance tests
+passed, including malformed ELF segments and transcript order/line boundaries;
+the native full-DDR algorithm tests also passed. Existing `systest`, `ddr_diag`
+and `ddr_full` ELF files passed the strengthened checker. These checks used the
+root workspace's exported scripts and did not change the independent checkout
+or access hardware. Apply the matching override snapshot before expecting this
+behavior from the independent checkout's scripts.
 
 Recheck a saved diagnostic transcript with:
 
@@ -325,7 +348,7 @@ For an interactive session, keep the same SoC image loaded. In one terminal,
 start a hardware server and leave it running:
 
 ```sh
-${VIVADO_LAB_ROOT}/bin/hw_server -s tcp:127.0.0.1:3122
+"${VIVADO_LAB_ROOT:?Set VIVADO_LAB_ROOT to the Vivado Lab installation}/bin/hw_server" -s tcp:127.0.0.1:3122
 ```
 
 In a second terminal, run `bash scripts/fedora-xsdb.sh`. At its prompt:
@@ -333,12 +356,15 @@ In a second terminal, run `bash scripts/fedora-xsdb.sh`. At its prompt:
 ```tcl
 connect -url tcp:127.0.0.1:3122
 targets
-# Select the MicroBlaze target ID shown by targets (replace TARGET_ID).
-targets TARGET_ID
-stop
+set cpus [targets -target-properties -filter {name =~ "MicroBlaze #*"}]
+if {[llength $cpus] != 1} {error "Expected exactly one MicroBlaze processor"}
+set cpu [lindex $cpus 0]
+set uart_ctx [dict get $cpu parent_ctx]
+targets [dict get $cpu target_id]
+if {![dict exists $cpu suspended] || ![dict get $cpu suspended]} {stop}
 rst -processor
-dow ${YPCB_ROOT}/projects/ypcb_00338_1p1_hack/build/fedora-microblaze/systest.elf
-puts [jtagterminal -socket]
+dow [file join $::env(YPCB_ROOT) projects ypcb_00338_1p1_hack build fedora-microblaze systest.elf]
+puts [jtagterminal -ctx $uart_ctx -socket]
 ```
 
 In a third terminal, run `nc 127.0.0.1 PORT`, replacing PORT with the returned
@@ -347,7 +373,7 @@ enter `r`, `g`, `y`, `m` or `t` followed by Enter. The original `m` result still
 needs all six individual tests to pass. These peripheral checks have not been
 run on a board here.
 
-When finished, enter `stop`, `jtagterminal -stop`, `disconnect` and `exit` in
+When finished, enter `stop`, `jtagterminal -ctx $uart_ctx -stop`, `disconnect` and `exit` in
 XSDB, then stop the foreground hardware server with Ctrl-C.
 
 Full Vivado is needed to rebuild or change this vendor-IP hardware. It is
@@ -359,15 +385,15 @@ With a powered board and DLC10 attached, the existing verified Fedora cable
 initializer performs volatile firmware initialization and checks the FPGA:
 
 ```sh
-bash ${YPCB_ROOT}/dlc10-init.sh
+bash "$YPCB_ROOT/dlc10-init.sh"
 ```
 
 Then the intended **SRAM-only** programming command is:
 
 ```sh
-${YPCB_ROOT}/openFPGALoader/build-xpcu-debug/openFPGALoader \
+"$YPCB_ROOT/openFPGALoader/build-xpcu-debug/openFPGALoader" \
   --cable xilinxPlatformCableUsb --freq 6000000 --index-chain 0 \
-  ${YPCB_ROOT}/projects/ypcb_00338_1p1_hack/build/fedora-baseline/hardware/top_wrapper.bit
+  "$YPCB_ROOT/projects/ypcb_00338_1p1_hack/build/fedora-baseline/hardware/top_wrapper.bit"
 ```
 
 The `run` command performs these steps and then the CPU diagnostic. No flash
@@ -378,8 +404,9 @@ programming is part of this baseline.
 The sequence is Bonetto BRAM, this MicroBlaze/vendor-MIG CPU/DDR baseline, then
 the prepared OpenTPU standalone USER2 JTAG flow on the separately powered card.
 PCIe enumeration and transfers follow when a PCIe host is available. The
-OpenTPU flow is documented in
-[`openTPU/docs/fedora_bringup.md`](../../openTPU/docs/fedora_bringup.md).
+OpenTPU flow is documented in `$OPENTPU_ROOT/docs/fedora_bringup.md`. Read
+`$OPENTPU_ROOT/HANDOFF.md` first for the current disposition; the runtime-clock
+effort was abandoned on 2026-10-22 and this historical sequence does not resume it.
 Bonetto's replacement DDR PHY still blocks
 external Wishbone memory until calibration; the supplied vendor MIG baseline
 helps distinguish board failures from custom-controller problems. MDM JTAG UART

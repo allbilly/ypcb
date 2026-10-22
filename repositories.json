@@ -226,8 +226,8 @@
         {
           "path": "docs/FEDORA_BRINGUP.md",
           "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/docs/FEDORA_BRINGUP.md",
-          "bytes": 21058,
-          "sha256": "0ccfa74c0a9dd4680e752a51b359aae6449b8e3f1137e16bc4558f43bcd56fa3"
+          "bytes": 22874,
+          "sha256": "7789dbc155c9457d386299f9a21c90efb36a2cf894b38345077133cfdb3f9c11"
         },
         {
           "path": "scripts/build_fedora_ddr_full.py",
@@ -238,8 +238,8 @@
         {
           "path": "scripts/build_fedora_microblaze.py",
           "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/build_fedora_microblaze.py",
-          "bytes": 8262,
-          "sha256": "a4ed3bfb11fc022f5d1591f49276b912bbacbfc376c5293a1d8e29187e9d4646"
+          "bytes": 8780,
+          "sha256": "4a4446d2eaaff50656fd5f40756a6d9f5f576d599645f925aaca7ed97d509598"
         },
         {
           "path": "scripts/fedora-xsdb.sh",
@@ -274,8 +274,8 @@
         {
           "path": "scripts/fedora_soc.py",
           "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/fedora_soc.py",
-          "bytes": 13485,
-          "sha256": "5d1e2a51d0d753504a1023f7f61427ad4f60e4ed1da3e2ebb054553ba788e994"
+          "bytes": 14101,
+          "sha256": "a203bd6f102bada56f41ba8780223c4fefe5704b0577851650f54f7853bedfa6"
         },
         {
           "path": "scripts/prepare_fedora_baseline.py",
@@ -298,8 +298,8 @@
         {
           "path": "scripts/test_fedora_soc.py",
           "copy": "local-overrides/projects-ypcb_00338_1p1_hack/files/scripts/test_fedora_soc.py",
-          "bytes": 16704,
-          "sha256": "708d2e05d974dd33a25db4794aa872b0fdb0d860151c77cd62219e257ac62c01"
+          "bytes": 22769,
+          "sha256": "f1bfd093a7b415bad3b190e063c27bc0591dc487c54d8bb7178226e6c083bee5"
         },
         {
           "path": "scripts/workspace_paths.py",
