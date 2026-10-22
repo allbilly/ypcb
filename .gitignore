@@ -6,6 +6,7 @@
 # Locally supplied firmware, generated evidence and native build products.
 /firmware/
 /migration-receipts/
+/build/
 /.Xil/
 *.so
 *.sr

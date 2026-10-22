@@ -1,0 +1,626 @@
+{
+  "observed_utc": "2026-10-22T19:24:50.672778+00:00",
+  "display_date": "2026-10-23 Asia/Hong_Kong",
+  "path_base": "YPCB_ROOT (repository root); project evidence paths are relative to each project",
+  "scope": "Read-only local inventory of YPCB SoC/accelerator implementations and reference/support checkouts. No implementation or hardware operation. Historical receipts are not current-source qualification.",
+  "soc_project_count": 13,
+  "git_status_note": "Untracked entries use git status --untracked-files=normal and can represent whole directories. Null HEAD means no commit; null branch with a HEAD means detached. HEAD is not a source snapshot for dirty trees.",
+  "projects": [
+    {
+      "path": "../openTPU",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "ypcb/dual-channel-4gb",
+      "head": "96eeb53e2eca042ec341ca5e12958b26ec39cce8",
+      "tracked_change_entries": 64,
+      "untracked_entries": 861,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "HANDOFF.md",
+          "bytes": 448716,
+          "sha256": "9875f706bc962990a725db248d1aba5d5bd6e8e5b0051143ca9c8b686af21d22"
+        },
+        {
+          "path": "docs/bitstreams.md",
+          "bytes": 37962,
+          "sha256": "397052ceeb51a51f77508b4a87bc320dc6838a71468dc5c79f107584929422c4"
+        },
+        {
+          "path": "docs/mac_c0182800.md",
+          "bytes": 7108,
+          "sha256": "7c47a84efa3eea0e503d543d25227da3db651cc7dbf21137e88c9418bcd01059"
+        },
+        {
+          "path": "docs/mac_c0182863.md",
+          "bytes": 17523,
+          "sha256": "ee1ad1371e39c8753d599f4de73654b66a286037a8f5943428659a31235d13ed"
+        },
+        {
+          "path": "build/handoffs/runtime-clock-abandoned-by-user-20261022.json",
+          "bytes": 22262,
+          "sha256": "b402480cef023c7f1c7ef41f3f579398e3a1add17983d70653803644e5084c6c"
+        }
+      ]
+    },
+    {
+      "path": "../KohakuTPU",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": "d5d4d904622f70578ca30fd07a7f03e4fcafc621",
+      "tracked_change_entries": 37,
+      "untracked_entries": 30,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "progress.md",
+          "bytes": 266136,
+          "sha256": "8c4eb14564800688d73e90414d21007db36529cabca8c142ee7bbe9cdcd6b36d"
+        },
+        {
+          "path": "boards/ypcb-00338/README.md",
+          "bytes": 17482,
+          "sha256": "073a87f232250e19f6ba6540bf48ca3a6ddf32e1df69a1ccbed026d32cc578e9"
+        },
+        {
+          "path": "build/ypcb/offline-hardening-prepared-20261021T004321Z/offline-checks/report.json",
+          "bytes": 2464,
+          "sha256": "f394ca0f045371ad2e4f898566a571fa66a96ac89fbbb55d01be0e4a929c7556"
+        }
+      ]
+    },
+    {
+      "path": "../vortex",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "ypcb",
+      "head": "60563652fc0f6ad7bc40e939a2d2813fe4fba36c",
+      "tracked_change_entries": 1,
+      "untracked_entries": 0,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "progress.md",
+          "bytes": 113852,
+          "sha256": "719948683ee5faeacfaff8893c1d064c4e451577d76266330ddfec27e057c0b9"
+        },
+        {
+          "path": "build_ypcb_blackwell_fixed32/goal-state.json",
+          "bytes": 3516,
+          "sha256": "90a6524dc4a7ba6309abe65ad81bfbd613edd0dd71315395d22fc2d49e459453"
+        },
+        {
+          "path": "build_ypcb_blackwell32/next-intmul-source/build_ypcb_blackwell32/completion-audit-20261023-v10-cleanup-recovery.json",
+          "bytes": 64541,
+          "sha256": "18ab86caf305a7eced56a83c349b27b3a5d27548dd16c5f270f5da663dfdaa63"
+        }
+      ]
+    },
+    {
+      "path": "../etsoc",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "fpga/ypcb-core-et",
+      "head": "511b7f1d5458001bf44b8f24621c723a2f232de2",
+      "tracked_change_entries": 3,
+      "untracked_entries": 28,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "README.md",
+          "bytes": 5534,
+          "sha256": "9163ef69271236eee356f66025001eba6fd4e64f1e1fe4738c8d1b08b0c96b39"
+        },
+        {
+          "path": "docs/llama.md",
+          "bytes": 23234,
+          "sha256": "320e6a330f07ace7a82c0af31eff6fe4c91fc61c7adcdfad212cf3bdec32df5a"
+        },
+        {
+          "path": "docs/data/stock-et-normal-cli-combined-jtag-eight-reference-20261021.json",
+          "bytes": 2306,
+          "sha256": "fe0791a550135cde7dfe3d073071b4d0351fdc87e231caf06882e2acc9562e8d"
+        }
+      ]
+    },
+    {
+      "path": "../LPULite",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": "6590e50a865d42afa906a6e1d73cda30a71780b9",
+      "tracked_change_entries": 11,
+      "untracked_entries": 3,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "synthesis/ypcb/README.md",
+          "bytes": 47662,
+          "sha256": "3ca12090f4d1f0f237c615c4702ed1c1ecda5f0c95a16f266bde922adb88da12"
+        },
+        {
+          "path": "build/ypcb/current-vivado-preparation.json",
+          "bytes": 27802,
+          "sha256": "fa869686322afd0cf86040c7ff182d6251d711f227e6cbcac705e50a9445d471"
+        }
+      ]
+    },
+    {
+      "path": "../soDLA",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "soDLA_beta",
+      "head": "66d9b2683aea6fe787fbde5b8ca19abb825d1247",
+      "tracked_change_entries": 2,
+      "untracked_entries": 3,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "docs/ypcb/bringup.md",
+          "bytes": 104829,
+          "sha256": "1dda7c1312c8885abb3032cacb5f6c3a302ce89f121fba1b3b5d6a6c560d486e"
+        },
+        {
+          "path": "build/ypcb/kintex-assembly-current.json",
+          "bytes": 279,
+          "sha256": "0a999db71557d01feb53abf9f6e270ad0d50295321427a8d22e64b44964e45f4"
+        }
+      ]
+    },
+    {
+      "path": "../somnia",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "master",
+      "head": "19645ffcc3a3901c3436a3b6905f0039b50c6d10",
+      "tracked_change_entries": 38,
+      "untracked_entries": 10,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "docs/YPCB_PREPARATION.md",
+          "bytes": 38814,
+          "sha256": "5769c406848efafa13beed6b5f5af1b6a62132c7e4ad2ae1cd7dc5bcdf029d1d"
+        },
+        {
+          "path": "out/prepare/native-candidate-pass.json",
+          "bytes": 5015,
+          "sha256": "80fd88e9ff47bce7076365c27eb5cfd4d535f087fd075013afff2fd35ec076d8"
+        }
+      ]
+    },
+    {
+      "path": "../rknpu-fpga",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": null,
+      "tracked_change_entries": 0,
+      "untracked_entries": 15,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "README.md",
+          "bytes": 92803,
+          "sha256": "50741621cb2a31abf8138e1dacce78aebe655f053eaca92e83ca1624d8a81a90"
+        },
+        {
+          "path": "docs/REVIEW_AND_PLAN.md",
+          "bytes": 25606,
+          "sha256": "4d3dd4b3435c2544b01ebd0e116ad5ad8f10a2fc33164fc7977834e9cb39a752"
+        },
+        {
+          "path": "docs/FPGA.md",
+          "bytes": 14452,
+          "sha256": "6c3faa3377e59354f02d5a2fbfe855a05554a58eb526ec32ad72daa7337b7f3f"
+        },
+        {
+          "path": "verification/README.md",
+          "bytes": 156199,
+          "sha256": "1656e112aecbbbf0d01d39472fcbee431ab433f6a0be4b06b915a4b8bdcc70f9"
+        }
+      ]
+    },
+    {
+      "path": "../tiny-tpu",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": "419e021e5feb12ef6334ac6c005e39cc24a58ef3",
+      "tracked_change_entries": 18,
+      "untracked_entries": 8,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "HARDWARE_TEST_20261017.md",
+          "bytes": 3580,
+          "sha256": "82134baf5cc60ae864509fd26f5e7aebfed1424571396955f56f80c95289be82"
+        },
+        {
+          "path": "ypcb_demo/docs/hardware/20261017/manifest.json",
+          "bytes": 1342,
+          "sha256": "bd03702a2eec90e4ebcf6890c88dc955f4ac12ca5cd784b4dc846e7efcb845ad"
+        }
+      ]
+    },
+    {
+      "path": "../tiny-gpu",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "master",
+      "head": "02b6c2ce223f606051a6d3a35ca942fbb1dffde2",
+      "tracked_change_entries": 7,
+      "untracked_entries": 2,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "fpga/README.md",
+          "bytes": 26152,
+          "sha256": "d6582a4628fd37acbbf5688d2137c6c0af7e8e1d87202d500e82fc8141bdddd8"
+        },
+        {
+          "path": "fpga/STATUS.md",
+          "bytes": 5343,
+          "sha256": "ea514a27e14205c6e21dec8669b86e15f789dacf2420bd8b7fd7147bbc6cbcd2"
+        },
+        {
+          "path": "build/ypcb/openxc7-1791294584961856221/report.json",
+          "bytes": 303383,
+          "sha256": "e0c00729876c10c7bac9f67b0a75b37500e0f1baac256da9ccb69ebc42a09103"
+        }
+      ]
+    },
+    {
+      "path": "../verigpu",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": "301c7cec9d5598d9c6854fac2314d7009f714760",
+      "tracked_change_entries": 15,
+      "untracked_entries": 3,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "fpga/ypcb/README.md",
+          "bytes": 20772,
+          "sha256": "0922214d60b73db697b03b66696364f9f0e93a5f34e57c2b2bd6a87077eff25e"
+        },
+        {
+          "path": "build/ypcb-prep/preparation-completion-audit.json",
+          "bytes": 7859,
+          "sha256": "9d91afd07fef48109d1b09a1f75e74ebbc4af97bbb8adab50261670885710150"
+        },
+        {
+          "path": "build/ypcb-openxc7/bit-20261006T113134895712Z/build-manifest.json",
+          "bytes": 4254,
+          "sha256": "27eb4e7399ba01211a46f21f2dbe36a738de766854769d9233094a13a56acedd"
+        }
+      ]
+    },
+    {
+      "path": "../bonetto-soc",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": "f6eea6c8ed9d79322a6ee8e9fd5a1ffccf57cb96",
+      "tracked_change_entries": 17,
+      "untracked_entries": 16,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "docs/fedora-bringup.md",
+          "bytes": 15280,
+          "sha256": "ca0de4e5c6c9142a214b08ccdeec199239c94181549463874b997eaa7a1e9568"
+        },
+        {
+          "path": "build/fedora-preparation-status.json",
+          "bytes": 2554,
+          "sha256": "5c595e11d7c09f261f7d2ebab89938523d0cbffae3a72bbfed7b66698ef76730"
+        },
+        {
+          "path": "build/fedora-first-bitstream-check.json",
+          "bytes": 798,
+          "sha256": "9be9240a3b9543435cb573ab8690ddb72c05315f017e91156adc5b32a1331aff"
+        },
+        {
+          "path": "build/vivado-ddr3-ch1-2gib-access-20261017T202400Z/build-manifest.json",
+          "bytes": 2304,
+          "sha256": "5aa6d4d718073a5dc176c45cfeaee4610fc4f8fb32c488c6118c50881341a1dd"
+        }
+      ]
+    },
+    {
+      "path": "projects/ypcb_00338_1p1_hack",
+      "role": "soc",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": "8b13ecf71b7061dd43a2b1580f0caa469f64303f",
+      "tracked_change_entries": 0,
+      "untracked_entries": 3,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "docs/FEDORA_BRINGUP.md",
+          "bytes": 21058,
+          "sha256": "0ccfa74c0a9dd4680e752a51b359aae6449b8e3f1137e16bc4558f43bcd56fa3"
+        },
+        {
+          "path": "build/fedora-baseline/vivado-bitstream-check-live-20261010T1017HKT.json",
+          "bytes": 1154,
+          "sha256": "8fd58e63ef519c01b9ddc3683e333eb528ef5b2b335ea278b51ff2362b094e4d"
+        },
+        {
+          "path": "build/fedora-microblaze/hardware-20261010T135515978852Z/result.json",
+          "bytes": 851,
+          "sha256": "5a03fe9ba3ed75ba8438169ee1fb6f8c3269b80c816c35e483ee8dbfdec1c1ea"
+        }
+      ]
+    },
+    {
+      "path": "../upstream_openTPU",
+      "role": "reference",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": "f237dab2f196855a59a083b1454786df8f01291f",
+      "tracked_change_entries": 0,
+      "untracked_entries": 0,
+      "dirty": false,
+      "evidence": [
+        {
+          "path": "README.md",
+          "bytes": 21704,
+          "sha256": "c9cb70b5c498a34d373fede6eaca4c71a59e82d898fa10377da7980638cdcd67"
+        }
+      ]
+    },
+    {
+      "path": "projects/openTPU-upstream-e15b4a44",
+      "role": "linked_worktree",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": null,
+      "head": "e15b4a44234661df7e14176b90669ead4d579fbe",
+      "tracked_change_entries": 0,
+      "untracked_entries": 0,
+      "dirty": false,
+      "evidence": [
+        {
+          "path": "README.md",
+          "bytes": 21704,
+          "sha256": "c9cb70b5c498a34d373fede6eaca4c71a59e82d898fa10377da7980638cdcd67"
+        }
+      ]
+    },
+    {
+      "path": "projects/inspur-adventures",
+      "role": "board_bringup_reference",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": "998bb2569ad3e31ee853d1c30957be4b8ac04095",
+      "tracked_change_entries": 0,
+      "untracked_entries": 0,
+      "dirty": false,
+      "evidence": [
+        {
+          "path": "README.md",
+          "bytes": 4492,
+          "sha256": "74f54fa383c7f1109da0624372daa86fd2179f3b526c7c01e31f92f2c5ab912b"
+        }
+      ]
+    },
+    {
+      "path": "ref/inspur-adventures",
+      "role": "cable_and_board_reference",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": "998bb2569ad3e31ee853d1c30957be4b8ac04095",
+      "tracked_change_entries": 1,
+      "untracked_entries": 2,
+      "dirty": true,
+      "evidence": [
+        {
+          "path": "README.md",
+          "bytes": 4492,
+          "sha256": "74f54fa383c7f1109da0624372daa86fd2179f3b526c7c01e31f92f2c5ab912b"
+        }
+      ]
+    },
+    {
+      "path": "ref/ypcb_00338_1p1_hack",
+      "role": "board_reference",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": "8b13ecf71b7061dd43a2b1580f0caa469f64303f",
+      "tracked_change_entries": 0,
+      "untracked_entries": 0,
+      "dirty": false,
+      "evidence": [
+        {
+          "path": "README.md",
+          "bytes": 567,
+          "sha256": "22ad04882fb951fc0d647ce30fc2f4b5c0b2aa4d71db6cf798bf1eef21726b18"
+        }
+      ]
+    },
+    {
+      "path": "ref/ZYNQ-NVDLA",
+      "role": "other_board_reference",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "master",
+      "head": "8879622518b9d500b024b80466156968f5e48056",
+      "tracked_change_entries": 0,
+      "untracked_entries": 0,
+      "dirty": false,
+      "evidence": [
+        {
+          "path": "README.md",
+          "bytes": 2296,
+          "sha256": "a41d98f662439dfc77c0a5b581a5f855ce3dc37ce2b32c71c3aecf405a558ce7"
+        }
+      ]
+    },
+    {
+      "path": "ref/LC480T",
+      "role": "board_material",
+      "exists": true,
+      "independent_git_root": false,
+      "evidence": []
+    },
+    {
+      "path": "openFPGALoader",
+      "role": "tool",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "master",
+      "head": "dafa7fcab2b96e927fd3108c3f33d1cc46117c8b",
+      "tracked_change_entries": 4,
+      "untracked_entries": 0,
+      "dirty": true,
+      "evidence": []
+    },
+    {
+      "path": "ref/fxload",
+      "role": "tool",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "master",
+      "head": "092d9b11f8881c6bf5a1b55288f07adf26d5ec0e",
+      "tracked_change_entries": 0,
+      "untracked_entries": 0,
+      "dirty": false,
+      "evidence": []
+    },
+    {
+      "path": "ref/xpcu-macos",
+      "role": "tool",
+      "exists": true,
+      "independent_git_root": true,
+      "branch": "main",
+      "head": "b38e956880557b5f2e94321878e654567de5cdd2",
+      "tracked_change_entries": 0,
+      "untracked_entries": 0,
+      "dirty": false,
+      "evidence": []
+    }
+  ],
+  "bitstreams_hash_checked": [
+    {
+      "project": "../openTPU",
+      "path": "bitstreams/spare-dual-host-4gb-c0182800/otpu.bit",
+      "bytes": 13337671,
+      "sha256": "df2521d80de1d69ea4ca758821dc67a814b95d67ac851b78727c9154a3104bf2",
+      "check": "file_hash_only_not_hardware_qualification"
+    },
+    {
+      "project": "../openTPU",
+      "path": "bitstreams/spare-dual-host-4gb-c0182863/otpu.bit",
+      "bytes": 13163043,
+      "sha256": "03b513a44544009afff9dfb82515bf84c5df84ac6a63673a0882308ce8a323ae",
+      "check": "file_hash_only_not_hardware_qualification"
+    },
+    {
+      "project": "../KohakuTPU",
+      "path": "bitstreams/ypcb-d5d4d90-altspread-v1/kohakutpu_ypcb.bit",
+      "bytes": 18735223,
+      "sha256": "d913b05cb9f6dd2a668c7f0bedfe05d439fa41f425c18ef90e16a2b923e5921d",
+      "check": "file_hash_only_not_hardware_qualification"
+    },
+    {
+      "project": "../LPULite",
+      "path": "build/ypcb/lpulite-ypcb-vivado-bitstream-20261014/lpu_ypcb.bit",
+      "bytes": 18735209,
+      "sha256": "b2fb4f1ee27a775d438317ebeb3d1c78e5af26a579c78612f32a5f85a2795320",
+      "check": "file_hash_only_not_hardware_qualification"
+    },
+    {
+      "project": "../somnia",
+      "path": "out/openxc7/1791241578261530791/somnia.bit",
+      "bytes": 18735162,
+      "sha256": "b775df6fa26c240c002e97f3ce9afa83eb7804c32bc5ea622fdf9ec8d28dcbcb",
+      "check": "file_hash_only_not_hardware_qualification"
+    },
+    {
+      "project": "../soDLA",
+      "path": "build/ypcb/assembled-kintex-1791420935597750730/sodla_ypcb.bit",
+      "bytes": 18735202,
+      "sha256": "c23654426ec9824c0b85d84e13ee8fe7933d0ebaff7278504e814855dae4b338",
+      "check": "file_hash_only_not_hardware_qualification"
+    },
+    {
+      "project": "../tiny-gpu",
+      "path": "build/ypcb/openxc7-1791294584961856221/tiny_gpu_demo.bit",
+      "bytes": 18735173,
+      "sha256": "2b64691f5a0be6deed105fb720e8896310ef246391179aaddae9c55bb9e1bd5b",
+      "check": "file_hash_only_not_hardware_qualification"
+    },
+    {
+      "project": "../verigpu",
+      "path": "build/ypcb-openxc7/bit-20261006T113134895712Z/verigpu_ypcb.bit",
+      "bytes": 18735177,
+      "sha256": "803203a2697862fda52b28bafc6c0b644745019b3c5c91b5948508093860980a",
+      "check": "file_hash_only_not_hardware_qualification"
+    },
+    {
+      "project": "../tiny-tpu",
+      "path": "ypcb_demo/artifacts/build-20261016T102846491634Z/tiny_tpu_ypcb.bit",
+      "bytes": 2655908,
+      "sha256": "b377cee1dc3082ab6de7cced229a1538bfa987335cfa5dc8cbd63a9268ecae42",
+      "check": "file_hash_only_not_hardware_qualification"
+    },
+    {
+      "project": "../bonetto-soc",
+      "path": "boards/ypcb-00338/build/bonetto_soc_ypcb00338_jtag_bram_first.bit",
+      "bytes": 18735165,
+      "sha256": "dbde7024a7e7e9485944cdedc3087384d7ac48d3357e5ce6d7d7d892067245dc",
+      "check": "file_hash_only_not_hardware_qualification"
+    },
+    {
+      "project": "../bonetto-soc",
+      "path": "build/vivado-ddr3-ch1-2gib-access-20261017T202400Z/bonetto_ddr3_ch1_2gib_access.bit",
+      "bytes": 18735240,
+      "sha256": "2d2e113f381f090eb9062e467765a68e8870befa8401962c07f860030040e2d3",
+      "check": "file_hash_only_not_hardware_qualification"
+    }
+  ],
+  "other_source_doc_roots_checked": [
+    "ClusterSim",
+    "et-platform",
+    "et-sysemu",
+    "mgpusim",
+    "miaow_gcn4",
+    "multi2sim",
+    "multi2sim-iiswc2016",
+    "navisim",
+    "npu",
+    "nvdla",
+    "nvgpu",
+    "onnc",
+    "qbox",
+    "tinygrad",
+    "tinygrad_nvdla",
+    "tinynvdla",
+    "tinytenstorrent",
+    "tt",
+    "tt-metal"
+  ],
+  "discovery": "Home-directory source filenames plus YPCB/xc7k480t matches in Markdown, reStructuredText, XDC, Tcl and TOML. Build/output/cache trees excluded from discovery; selected generated receipts inspected for identified ports."
+}
